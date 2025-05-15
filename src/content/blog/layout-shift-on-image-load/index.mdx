@@ -126,12 +126,17 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
   return (
     <>
-      <div className="grid w-full grid-cols-5 gap-4 p-4">
+      <div 
+        aria-busy={loading}
+        role="status"
+        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'} 
+        className="grid w-full grid-cols-5 gap-4 p-4"
+      >
         {loading
           ? new Array(30)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="aspect-square w-full animate-pulse bg-gray-300"></div>
+                <div key={i} className="aspect-square w-full animate-pulse bg-gray-300" aria-hidden="true"></div>
               ))
           : gallery.map((item) => (
               <div key={item.id} className="animate-fade-in aspect-square overflow-hidden">
@@ -188,12 +193,17 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
   return (
     <>
-      <div className="grid w-full grid-cols-5 gap-4 p-4">
+      <div 
+        aria-busy={loading}
+        role="status"
+        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'} 
+        className="grid w-full grid-cols-5 gap-4 p-4"  
+      >
         {loading
           ? new Array(30)
               .fill(0)
               .map((_, i) => (
-                <div key={i} className="aspect-square w-full animate-pulse bg-gray-300"></div>
+                <div key={i} className="aspect-square w-full animate-pulse bg-gray-300" aria-hidden="true"></div>
               ))
           : gallery.map((item) => (
               <div
