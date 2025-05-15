@@ -1,9 +1,9 @@
 import type { IconMap, SocialLink, Site } from '@/types'
 
 export const SITE: Site = {
-  title: 'Ari Space',
-  description: 'ari space 입니다.',
-  href: 'https://astro-erudite.vercel.app',
+  title: 'ari Space',
+  description: '프론트엔드 개발자 ari의 기술과 경험을 기록하는 공간입니다.',
+  href: 'https://ari-dev-three.vercel.app',
   author: 'ari',
   locale: 'ko',
   featuredPostCount: 2,
@@ -14,10 +14,6 @@ export const NAV_LINKS: SocialLink[] = [
   {
     href: '/blog',
     label: 'blog',
-  },
-  {
-    href: '/authors',
-    label: 'authors',
   },
 ]
 
