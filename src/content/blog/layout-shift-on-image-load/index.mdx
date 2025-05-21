@@ -269,8 +269,8 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 구현 복잡도가 낮고 UI 흐름을 안정적으로 유지할 수 있으며, 콘텐츠를 순차적으로 노출시켜 이탈률을 줄일 확률이 높은 Skeleton 처리 방식이 더 적합하다고 판단했습니다:
 
 #### Cumulative Layout Shift로 확인해본 적용 결과
-<div class="flex  gap-4 my-4">
-  <div class="border rounded-xl px-3 py-5 bg-white">
+<div class="flex gap-4 my-4 max-sm:flex-col">
+  <div class="border rounded-xl px-3 py-5">
     <h4 class="text-lg font-semibold m-0">적용 전</h4>
     <img src="/image-road-default.gif" alt="로딩 데모" width="320" class="mx-auto"/>
     <img src="/cls-image-road-default.png" alt="기본 로드 cls" className=' mb-0' width="100%" height="200px"/>
@@ -282,7 +282,7 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
     </div>
   </div>
 
-  <div class="border rounded-xl p-3 bg-white px-3 py-5">
+  <div class="border rounded-xl px-3 py-5">
     <h4 class="text-lg font-semibold m-0 ">적용 후</h4>
     <img src="/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="320" class="mx-auto" />
     <img src="/cls-after-image-road.png" alt="개선 로드 cls" className='  mb-0' width="100%" />
