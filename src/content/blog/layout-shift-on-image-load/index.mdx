@@ -9,7 +9,7 @@ authors: ['ari']
 
 import Callout from '@/components/Callout.astro'
 
-이미지 리스트를 비동기적으로 불러와 렌더링하는 방식은 많은 서비스에서 널리 사용되지만,  
+이미지 리스트를 비동기적으로 불러와 렌더링하는 방식은 많은 서비스에서 널리 사용되지만,
 **로딩 중 이미지 크기나 공간이 미리 확보되지 않으면**, 콘텐츠가 갑자기 밀리거나 위치가 바뀌는 문제가 발생할 수 있습니다.
 이는 "단순히 이미지가 늦게 뜨는 문제"를 넘어 **사용자가 보는 UI 전체의 일관성과 신뢰도에 영향**을 줄 수 있습니다. <br/>
 이 글에서는 왜 이러한 문제가 발생하는지, **브라우저 렌더링 원리와 사용자 경험 관점에서** 살펴보려고 합니다.
@@ -54,19 +54,19 @@ Reflow란 브라우저 렌더링 과정 중 첫 번째 레이아웃이 일어난
 <img src="/image-road-default.gif" alt="로딩 데모" width="400" />
 
 
-API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,이미지마다 요청 및 로딩 시점이 달라지고, 
+API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,이미지마다 요청 및 로딩 시점이 달라지고,
 각 이미지의 크기를 사전에 알 수 없는 경우 **순차적으로 Reflow가 발생**합니다.
-이미지 크기를 지정하지 않으면, 로딩 전에 브라우저는 요소의 공간을 확보하지 못합니다.  
+이미지 크기를 지정하지 않으면, 로딩 전에 브라우저는 요소의 공간을 확보하지 못합니다.
 사용자 입장에서는 **처음엔 아무것도 없었다가**, 이미지들이 **툭툭 튀어나오듯** 순서 없이 등장하게 됩니다.
 
-이 과정에서 다른 콘텐츠가 갑자기 밀리거나 위치가 바뀌는 듯 보이는데,  
+이 과정에서 다른 콘텐츠가 갑자기 밀리거나 위치가 바뀌는 듯 보이는데,
 이는 브라우저가 **이미지의 크기를 뒤늦게 파악하고 레이아웃을 다시 계산(Reflow)하기 때문**입니다.
 
-즉, 사용자에게는 “카드가 갑자기 중구난방으로 나오는 것처럼” 보이지만,  
+즉, 사용자에게는 “카드가 갑자기 중구난방으로 나오는 것처럼” 보이지만,
 그 실제 원인은 **초기 공간이 확보되지 않은 데서 시작된 Reflow의 반복**입니다.
 
 <Callout title="결과적으로 나타나는 UX 문제" variant="danger">
-- 이미지 크기가 제각각인 것처럼 보이고 화면이 위아래로 밀리며 레이아웃 시프트 현상이 발생합니다.  
+- 이미지 크기가 제각각인 것처럼 보이고 화면이 위아래로 밀리며 레이아웃 시프트 현상이 발생합니다.
 - 콘텐츠 인지 흐름이 깨져 사용자가 빠르게 이탈할 가능성이 증가합니다.
 
 <Callout title="레이아웃 시프트와 reflow의 상관관계" variant="tip">
@@ -89,7 +89,7 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
 <img src="/load-all-at-once-image.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
 
-```ts  collapse={1-11,35-55} 
+```ts  collapse={1-11,35-55}
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -126,10 +126,10 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
   return (
     <>
-      <div 
+      <div
         aria-busy={loading}
         role="status"
-        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'} 
+        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'}
         className="grid w-full grid-cols-5 gap-4 p-4"
       >
         {loading
@@ -164,7 +164,7 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 **구현 방법**: `<img>` 태그의 onLoad 이벤트를 사용해 이미지가 로드되면 opacity 값과 transition 등을 고려한 부드러운 전환 처리를 하여 Skeleton 위에 자연스럽게 표시되도록 합니다.
 
 <img src="/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
-```ts collapse={1-22,27-35,53-57} 
+```ts collapse={1-22,27-35,53-57}
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadedImages, setLoadedImages] = useState<string[]>([]);
@@ -193,11 +193,11 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
   return (
     <>
-      <div 
+      <div
         aria-busy={loading}
         role="status"
-        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'} 
-        className="grid w-full grid-cols-5 gap-4 p-4"  
+        aria-label={loading ? '갤러리 이미지를 불러오는 중입니다' : '갤러리 이미지 목록'}
+        className="grid w-full grid-cols-5 gap-4 p-4"
       >
         {loading
           ? new Array(30)
@@ -234,19 +234,19 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 | 단점 | Skeleton 자체는 실제 콘텐츠가 아니기 때문에 시각적 몰입도가 떨어질 수 있음.<br/>Skeleton 크기가 정확하지 않으면 Reflow 발생. |
 
 <Callout title="주의" variant="warning">
-Skeleton이 실제 이미지와 다른 크기일 경우,  
-이미지가 교체되는 순간 Reflow가 발생해 레이아웃이 흔들릴 수 있습니다.  
+Skeleton이 실제 이미지와 다른 크기일 경우,
+이미지가 교체되는 순간 Reflow가 발생해 레이아웃이 흔들릴 수 있습니다.
 → Skeleton과 이미지의 크기를 동일하게 유지하는 것이 중요합니다.
 </Callout>
 
 <div class="h-px bg-gray-100 my-6"></div>
 ### 방법 3: Progressive Image Loading
-사용자에게 저해상도 이미지를 먼저 보여주고, 이후 고해상도 이미지로 자연스럽게 전환하는 방식입니다.  
+사용자에게 저해상도 이미지를 먼저 보여주고, 이후 고해상도 이미지로 자연스럽게 전환하는 방식입니다.
 로딩 중임을 느끼게 하기보다, **“이미 이미지가 나왔다”는 심리적 안정을 주는 UX 전략**입니다.
 
 Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이미지 자체를 흐리게 보여준다는 점에서 다릅니다.**
 
-**구현 방법**:  
+**구현 방법**:
 저해상도 썸네일 이미지에 Blur 필터를 적용해 먼저 렌더링한 뒤, 고해상도 이미지로 자연스럽게 교체합니다.
 <br/>Next.js의 `next/image` 컴포넌트에서는 `placeholder="blur"`와 `blurDataURL` 속성을 사용해 구현할 수 있으며
 <br/>`blurDataURL`은 base64로 인코딩된 저용량 이미지이며, `plaiceholder` 등의 도구를 사용해 생성할 수 있습니다.
@@ -264,7 +264,7 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 
 ### 최종 선택 및 적용
 
-최종적으로, 개별 이미지에 Skeleton UI를 적용하는 방식을 선택했습니다.  
+최종적으로, 개별 이미지에 Skeleton UI를 적용하는 방식을 선택했습니다.
 프로젝트가 React 기반이라 구현 복잡도가 높은 Progressive Image Loading보다는 <br/>
 구현 복잡도가 낮고 UI 흐름을 안정적으로 유지할 수 있으며, 콘텐츠를 순차적으로 노출시켜 이탈률을 줄일 확률이 높은 Skeleton 처리 방식이 더 적합하다고 판단했습니다:
 
@@ -300,14 +300,14 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 
 
 <Callout title="실무에서 Skeleton UI를 적용할 때 유의할 점" variant="tip">
-- 이미지 크기와 Skeleton 크기를 **정확히 일치**시켜야 Reflow가 발생하지 않음  
-- transition 효과를 적절히 넣으면 시각적 전환이 더 부드러움  
+- 이미지 크기와 Skeleton 크기를 **정확히 일치**시켜야 Reflow가 발생하지 않음
+- transition 효과를 적절히 넣으면 시각적 전환이 더 부드러움
 - CLS 측정을 위해 Chrome DevTools의 Performance 탭을 통해 확인 가능.
 </Callout>
 
 ---
 <Callout title="Reflow, Layout Shift, CLS 정리" variant="note">
-Reflow는 브라우저 내부의 연산이고, Layout Shift는 그 시각적 결과입니다.  
+Reflow는 브라우저 내부의 연산이고, Layout Shift는 그 시각적 결과입니다.
 그리고 CLS(Cumulative Layout Shift)는 이 Layout Shift가 **얼마나 반복적으로, 심각하게 일어났는지를 측정한 웹 성능 지표**입니다.
 </Callout>
 
@@ -338,7 +338,7 @@ Progressive Image Loading 기법을 적용하면 보다 부드러운 시각적 �
 <details>
 <summary>읽어보면 좋은 Tip</summary>
 ### 기타 방법: 로딩 스피너(Spinner) 보여주기
-이미지가 로드되기 전, 각 위치 또는 화면 중앙에 원형으로 돌아가는 로딩 스피너(Spinner)를 표시합니다. 이미지가 로드되면 스피너를 숨기고 이미지를 보여줍니다.  
+이미지가 로드되기 전, 각 위치 또는 화면 중앙에 원형으로 돌아가는 로딩 스피너(Spinner)를 표시합니다. 이미지가 로드되면 스피너를 숨기고 이미지를 보여줍니다.
 
 |  |  |
 |------|------|
@@ -347,22 +347,22 @@ Progressive Image Loading 기법을 적용하면 보다 부드러운 시각적 �
 
 <Callout title="언제 이 방법이 특히 유용할까?" variant="tip">
 - **사용자가 이탈하기 쉬운 로딩 구간에서** 스피너는 **즉각적으로 ‘기다림’을 인지시켜** 이탈률을 줄이는 데 효과적
-- **개별 이미지가 독립적으로 로드되고**, Skeleton보다 **가벼운 피드백이 필요할 때**  
-- 이미지 수가 많지 않고, **전체 UI의 자리 확보가 중요하지 않을 때**  
+- **개별 이미지가 독립적으로 로드되고**, Skeleton보다 **가벼운 피드백이 필요할 때**
+- 이미지 수가 많지 않고, **전체 UI의 자리 확보가 중요하지 않을 때**
 - Skeleton을 사용하기 어려운 디자인이거나, **전체 레이아웃이 유동적인 경우**
 </Callout>
 
 ---
 ### 기타 로드 방법: 정적 이미지 로딩과 동적 이미지 로딩
 <Callout title="정적 이미지 로딩과 동적 이미지 로딩의 차이" variant="tip">
-브라우저는 HTML 문서를 정적으로 파싱할 때, 프리로드 스캐너를 통해 `<img>` 등의 리소스를 미리 탐색하고 요청하여 초기 렌더링 속도를 높일 수 있습니다.  
-하지만 API로 데이터를 받아 JavaScript로 이미지를 **동적으로 렌더링**하는 경우, 이 최적화는 작동하지 않습니다.  
-또한 프리로드 스캐너가 작동하더라도, **이미지 로딩 속도는 서버 응답 속도, 이미지 크기 등에 따라 달라질 수 있기 때문에**,  
+브라우저는 HTML 문서를 정적으로 파싱할 때, 프리로드 스캐너를 통해 `<img>` 등의 리소스를 미리 탐색하고 요청하여 초기 렌더링 속도를 높일 수 있습니다.
+하지만 API로 데이터를 받아 JavaScript로 이미지를 **동적으로 렌더링**하는 경우, 이 최적화는 작동하지 않습니다.
+또한 프리로드 스캐너가 작동하더라도, **이미지 로딩 속도는 서버 응답 속도, 이미지 크기 등에 따라 달라질 수 있기 때문에**,
 결국 UI가 **순차적으로 흔들리거나, Reflow가 발생하는 상황은 여전히 생길 수 있습니다.**
 <Callout title="프리로드 스캐너란?" variant="note">
 프리로드 스캐너는 메인 HTML 파서와 별도로 동작하는 “미리보기 역할”을 하고 있습니다.
 	- 메인 파서가 DOM 트리를 차근차근 만드는 동안, 프리로드 스캐너는 HTML 문서를 빠르게 훑어보며 병렬로 동작합니다.
-	- 주요 역할은 리소스 선탐색(preloading)입니다:**
+	- 주요 역할은 리소스 선탐색(preloading)입니다.
 	- HTML 내 `<link>`, `<img>`, `<script>`, `<video>`, `<audio>` 등 외부 리소스를 사용하는 태그들을 미리 발견합니다.
 	- 메인 파서가 해당 태그에 도달하기도 전에, 브라우저가 해당 리소스를 미리 다운로드 요청할 수 있도록 합니다.
 
