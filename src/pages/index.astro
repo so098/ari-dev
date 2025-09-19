@@ -13,7 +13,7 @@ const blog = await getRecentPosts(SITE.featuredPostCount)
 <Layout>
   <PageHead slot="head" title="Home" />
   <section>
-    <div class="border-b pb-5">
+    <!-- <div class="border-b pb-5">
       <div class="pt-0">
         <p class="text-muted-foreground mb-2 text-sm">
           프론트엔드 개발자 ari의 기술 기록 공간입니다.
@@ -40,8 +40,18 @@ const blog = await getRecentPosts(SITE.featuredPostCount)
           개선, 협업, 사용자 경험 에 관심이 많고, 조금씩 성장하는 과정을
           기록하고 있어요.
         </p>
+
       </div>
-    </div>
+    </div> -->
+    <blockquote
+      class="text-muted-foreground p-3 text-right text-[15px] leading-6"
+    >
+      <p>지성은 가능한 것과 불가능한 것을 구분한다.</p><p>
+        이성은 의미 있는 것과 의미 없는 것을 구분한다.
+      </p>
+      <p>가능한 것 조차도 의미가 없을 수 있다.</p>
+      <span class="text-[12px]">- 막스 본(Max Born)</span>
+    </blockquote>
   </section>
   <section class="flex flex-col gap-y-4">
     <h2 class="text-2xl font-medium">Latest posts</h2>
