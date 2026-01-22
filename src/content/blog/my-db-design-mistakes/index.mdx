@@ -1,0 +1,337 @@
+---
+title: '사이드 프로젝트 DB 설계에서 겪은 안티패턴과 해결 과정'
+description: '감정 루틴 앱을 만들면서 처음으로 DB 설계를 하게되었고, 그 과정에서 겪은 안티패턴 사례와 배움을 정리했습니다.'
+date: '2025-07-22'
+tags: ['database', 'postgresql', 'supabase']
+image: "/static/1200x630.png"
+authors: ['ari']
+---
+
+import Callout from '@/components/Callout.astro'
+
+
+사이드 프로젝트로 **감정 루틴 앱**을 만들면서 처음으로 **DB 설계**를 하게 되었습니다.<br/>
+앱의 흐름이 **감정 기록 → 루틴 추천 → 실행/회고 → XP 보상**으로 이어지다 보니, 이를 담기 위해 User, Profile, Emotion, Routine, Mission, XP 같은 엔터티가 필요해졌습니다.
+
+처음엔 Firebase 같은 NoSQL을 쓰려 했지만, 공부와 협업을 위해 **PostgreSQL 기반 Supabase**를 선택했습니다.
+DB 경험과 쿼리 작성 경험이 부족해서 SQL Antipatterns 책 및 PostgreSQL 공식문서를 참고했고, 오늘은 그 과정에서 겪은 **안티패턴 사례와 배움**을 작성하였습니다.
+
+<Callout title="엔터티(Entity)란?" variant="note">
+관계형 데이터베이스의 테이블을 추상화한 개념입니다.
+User, Profile, Emotion 등 각각의 테이블이 하나의 엔터티에 해당합니다.
+</Callout>
+
+---
+
+## 1. User vs Profile 분리 사례
+
+### 고민 및 문제점
+
+> User 정보와 Profile 정보는 둘 다 사용자의 정보를 담고 있다. 같은 정보인데 한 테이블에 합치면 안 될까?
+
+**변화 주기가 다른 속성**을 어떻게 관리해야 할지 고민이 있었습니다.
+
+- User: 로그인, 인증, 권한 같은 **민감하고 잘 변하지 않는 값**
+- Profile: 닉네임, 아바타, 공개 범위처럼 **자주 바뀌고, 프라이버시 정책이 걸린 값**
+
+보안성과 변화 주기를 기준으로 보통 분리하는 것이 좋다고 합니다.
+
+### 핵심 안티패턴 쿼리 예시
+
+```sql
+-- (안티패턴) User + Profile이 섞여 있을 때
+
+SELECT id, email, nickname, avatar, last_login, is_verified
+FROM users;
+
+-- 닉네임/아바타처럼 자주 바뀌는 값과 email처럼 거의 안 바뀌는 값이 섞여 있으면
+-- 변경 빈도가 다른 데이터가 함께 갱신되어 불필요한 쓰기가 발생할 수 있습니다.
+```
+
+### 해결방안
+
+- **User** → 인증·식별의 근간. UNIQUE, FK, 감사 로그 같은 시스템적 제약 강화 (신분증 같은 것)
+- **Profile** → 자주 바뀌는 속성만 관리. 공개/비공개, 노출 범위 같은 정책은 Profile에 둠 (명함 같은 것)
+- **삭제 정책** → ON DELETE CASCADE 또는 soft-delete(비식별화)
+
+<Callout title="ON DELETE CASCADE란?" variant="tip">
+상위 테이블의 행이 삭제될 때 하위 테이블에서 행을 자동으로 삭제하는 제약 조건입니다.
+예를 들어, User를 삭제하면 Profile도 자동으로 삭제됩니다.
+</Callout>
+
+### 장점 (프론트 관점)
+
+프론트는 Profile만 자주 불러오므로(User 정보 X) API 응답 크기가 줄어듭니다.
+
+---
+
+## 2. Emotion vs Routine 분리 사례
+
+### 고민 및 문제점
+
+> Emotion(감정)과 Routine(루틴)은 기획상 같이 따라다니는데, 한 테이블에서 관리하면 쿼리 짜는 것도 쉽고 단순하지 않을까
+
+서로 **다른 책임을 가진 데이터**는 어떻게 관리해야 할지 고민이 있었습니다.
+
+- Emotion = 감정 로그, 상태 기록 (하루 수십 개 쌓일 수 있음)
+- Routine = 행동, 실행 이벤트
+
+이 둘을 합쳐도, 일단 인덱스로 구분이 가능하지만 나중에 데이터가 많아졌을 때 성능과 관리 모두에서 발목을 잡을 수 있습니다.
+
+
+### 핵심 안티패턴 쿼리 예시
+
+```sql
+-- (안티패턴) 감정+루틴 한 테이블
+
+SELECT * FROM logs WHERE user_id = 1 ORDER BY created_at DESC;
+
+-- 감정 데이터와 루틴 데이터가 한꺼번에 딸려옵니다.
+-- 감정 로그 수천 개가 늘어나면,
+-- 루틴만 보고 싶어도 항상 같이 끌려오는 문제가 생깁니다.
+```
+
+### 해결방안
+
+- Emotion은 **감정 기록/분류** 테이블로 분리
+- Routine은 **미션 생성·체크·완료 이벤트** 테이블로 분리
+- 이렇게 하면 Emotion 로그가 커져도 Routine은 영향을 받지 않습니다.
+
+### 장점 (프론트 관점)
+
+API 자체가 분리돼 있어 필터링, 보관, 통계, 노출, 조회 성능이 깔끔하게 유지됩니다.
+
+---
+
+## 3. LongMission / ShortMission 계층 사례
+
+### 고민 및 문제점
+
+> LongMission(장기 목표)을 삭제하면 ShortMission(단기 과제)는 삭제해야 할까
+> 그리고 장기 미션 상태는 단기 미션 완료 상태를 컬럼에 저장하는 게 좋을까, 아니면 항상 장기 미션 완료율을 보여줄 때마다 쿼리로 집계하는 게 맞을까?
+
+<Callout title="문제 상황" variant="warning">
+- **ON DELETE CASCADE로 다 지우면** 회고 기록이 사라집니다.
+- **남겨두면** 정합성(데이터가 서로 일치하고 모순 없이 유지되는 상태)이 깨집니다.
+- **장기 미션 상태를 컬럼에 저장**하면, 단기 미션 상태가 바뀔 때마다 장기 미션 컬럼을 함께 갱신해야 해서 데이터 불일치 위험이 있습니다.
+</Callout>
+
+### Before 테이블
+
+| **missions 테이블** | **설명** |
+| --- | --- |
+| id (PK) | 미션 ID |
+| user_id (FK) | 사용자 ID |
+| type | 'long' / 'short' 구분 |
+| title | 미션 제목 |
+| status | 진행 상태 |
+| done_at | 완료 시각 |
+
+
+### 변경 패턴 테이블
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div>
+
+**LongMission**
+
+| **컬럼** | **설명** |
+| --- | --- |
+| id (PK) | 장기 미션 ID |
+| user_id (FK) | 사용자 ID |
+| title | 장기 미션 제목 |
+| archived_at | 아카이브 처리 시각 |
+
+</div>
+<div>
+
+**ShortMission**
+
+| **컬럼** | **설명** |
+| --- | --- |
+| id (PK) | 단기 미션 ID |
+| long_mission_id (FK, ON DELETE SET NULL) | 연결된 장기 미션 (없어질 경우 NULL) |
+| title | 단기 미션 제목 |
+| status | 상태 |
+| done_at | 완료 시각 |
+
+</div>
+</div>
+
+### 해결방안
+
+- LongMission은 삭제하지 않고 **아카이브 처리**
+- LongMission을 진짜 삭제한다면, ShortMission의 FK는 **ON DELETE SET NULL** → 회고 히스토리는 남기되 FK만 끊습니다.
+- 상태 관리 → ShortMission에만 status/done_at 저장, LongMission 상태는 **단기 미션 데이터를 모아서 API나 뷰에서 계산**
+
+<Callout title="ON DELETE SET NULL이란?" variant="tip">
+부모 행이 삭제되면 자식 레코드의 외래 키(FK) 값을 NULL로 설정하는 제약 조건입니다.
+데이터는 유지하되 연결만 끊고 싶을 때 사용합니다.
+</Callout>
+
+<Callout title="추후 고려 사항" variant="note">
+ShortMission이 너무 많아져 쿼리 속도가 느려지면 **머티리얼라이즈드 뷰(미리 계산된 결과를 저장해두는 뷰)**로 변경을 검토할 수 있습니다.
+</Callout>
+
+### 참고: 다중 컬럼 이슈가 허용되는 경우
+
+보통은 같은 종류의 데이터를 여러 컬럼에 나눠 넣으면 안티패턴이지만, **역할(role)이 다를 때**는 예외적으로 허용됩니다.
+
+버그를 **보고한 사람**, **수정하는 사람**, **검증하는 사람** — 세 컬럼 다 같은 "User"를 참조하지만, 역할이 다르기 때문에 각각 별도로 둡니다.
+
+### 장점 (프론트 관점)
+
+- 단기/장기 미션 조건 로직 및 상태 관리가 단순해집니다.
+- 프론트에서 집계 API를 따로 두면, UI 단에서도 장기/단기를 구분해 표현하기 쉬워집니다.
+
+---
+
+## 4. XP 보상 기준 스냅샷 사례
+
+### 고민 및 문제점
+
+> 미션 완료 시 보상을 주는데, 추후 보상 정책이 변경되면 UI에서 그때 당시 데이터는 어떻게 다뤄야 할까?
+
+FK만 사용하면 정책 변경 시 과거 기록이 왜곡됩니다.
+
+<Callout title="예시" variant="warning">
+- 1월: 단기 미션 1개 완료 = 10XP
+- 2월: 정책 변경 → 5XP
+- 결과: FK만 쓰면 1월 기록도 5XP로 바뀌어 보입니다.
+
+UX 입장에서는 "내가 그때 받았던 보상"이 잘못 표시되는 문제가 발생합니다.
+</Callout>
+
+### 변경 패턴 테이블
+
+| **컬럼** | **설명** |
+| --- | --- |
+| id (PK) | 회고 ID |
+| user_id (FK) | 사용자 |
+| rule_id (FK) | xp_rules.id 참조 (규칙이 뭔지 기록용) |
+| xp_snapshot | 그때 적용된 XP 값 복사본 |
+| created_at | 생성 시각 |
+
+### 해결방안
+
+- 정책 변경 영향을 받는 값만 **스냅샷으로 저장** (예: 당시 XP 값)
+- 나머지는 FK 참조 그대로 유지
+
+### 장점 (프론트 관점)
+
+과거 회고 화면을 열었을 때 당시와 똑같이 보이므로 신뢰도가 올라갑니다.
+
+---
+
+## 5. 추천 룰 스키마 (JSONB/정규화/하이브리드) 사례
+
+### 고민 및 문제점
+
+> 추천 로직이 많고 자주 바뀌는데, 따로 값들을 테이블로 나누기보다 JSON을 사용해도 될까?
+
+추천 로직은 UX 실험, AB 테스트 때문에 자주 바뀝니다.
+
+<Callout title="각 방식의 트레이드오프" variant="note">
+**JSONB만 쓰면**
+- 유연하지만, 오타/중복/동의어를 자동으로 막아주지 못합니다.
+- 쿼리가 복잡해지며 성능이 불확실해집니다.
+- FK 제약을 못하기 때문에 존재하지 않는 코드가 남아도 모릅니다. (안티패턴)
+
+**정규화만 쓰면**
+- 데이터 품질은 좋지만 조건이 늘 때마다 스키마 변경이 필요합니다.
+</Callout>
+
+### MVP에서 사용할 예시 테이블
+
+| **컬럼** | **타입** | **설명** | **JSONB 예시 값** |
+| --- | --- | --- | --- |
+| id | uuid | PK | |
+| title | text | 제목 | |
+| description | text | 설명 | |
+| tag | jsonb | 태그 (분류/추천 조건) | `{ "category": ["위생", "힐링"], "recommendation": ["아침", "불안"] }` |
+| difficulty | smallint | 1~5 (실행 난이도) | |
+| is_active | boolean | 추천/노출 여부 | |
+| created_at | timestamptz | 생성 시각 | |
+
+### 해결방안
+
+- **MVP 단계**: JSONB 사용 → 빠른 실험 가능
+- **성장 단계**: 하이브리드 전환 (기준 속성은 정규화, 가변/실험 조건은 JSONB)
+
+<Callout title="JSON vs JSONB" variant="tip">
+- **json**: 입력된 텍스트 그대로 저장 (공백, 순서 보존)
+- **jsonb**: 파싱해서 이진으로 저장 (인덱스/검색 최적화)
+
+PostgreSQL에서는 실무에서 jsonb를 주로 사용합니다.
+</Callout>
+
+### 장점 (프론트 관점)
+
+- 초기엔 빠르게 실험할 수 있고,
+- 서비스가 안정화되면 성능·보안·분석도 보장할 수 있습니다.
+
+---
+
+## 6. NULL을 기본값처럼 쓰는 사례
+
+### 고민 및 문제점
+
+> 조건이 많아질 경우, 상관없는 조건은 어떤 방식으로 작성해야 할까? 빈칸? 혹은 NULL?
+
+조건이 많을 때 "상관없음"을 NULL로 처리하고 싶을 수 있습니다.
+
+| id | emotion | time | action |
+| --- | --- | --- | --- |
+| 1 | 불안 | NULL | 산책 |
+| 2 | NULL | 아침 | 명상 |
+| 3 | NULL | NULL | 기본 |
+
+<Callout title="NULL의 의미" variant="danger">
+SQL에서 NULL은 0, 빈 문자열, false가 아니라 **"알 수 없음(unknown)"**입니다.
+그래서 NULL을 ANY처럼 쓰면 의미가 왜곡됩니다.
+</Callout>
+
+### 핵심 안티패턴 쿼리 예시
+
+```sql
+-- (안티패턴) NULL을 ANY처럼 사용
+
+SELECT * FROM rules
+WHERE (emotion='불안' OR emotion IS NULL)
+  AND (time='아침' OR time IS NULL)
+  AND (place='집' OR place IS NULL);
+
+-- 조건이 늘어날수록 OR…IS NULL 패턴이 반복 → 쿼리 가독성 저하
+-- NULL = '제한 없음'이 아니라 '알 수 없음'으로 처리돼
+-- 쿼리 최적화/의도 전달 모두 애매해집니다.
+```
+
+### 해결방안
+
+- ENUM 값(ANY, UNKNOWN)을 직접 정의해 의미를 분명히 표현
+- 별도 테이블로 관계를 분리
+- MVP에서는 JSONB에서 "빈 배열/키 없음"으로 처리해 단순화할 수 있습니다.
+
+### 장점
+
+- **(프론트 관점)** API 응답을 봤을 때 값의 의미가 분명해집니다.
+- 나중에 쿼리 최적화하기도 쉬워집니다.
+
+---
+
+## 전체 요약
+
+<Callout title="핵심 정리" variant="note">
+1. **엔터티는 책임·변화 주기·보안 요구가 다르면 분리하는 것이 안전합니다.**
+2. **스냅샷은 UX 왜곡 방지용으로 최소한만 둡니다.**
+3. **추천 룰**은 초기엔 JSONB로, 안정화 단계에선 하이브리드로 전환합니다.
+4. **NULL을 ANY처럼 쓰는 것은 피하고**, ENUM이나 별도 테이블로 명확히 표현합니다.
+</Callout>
+
+---
+
+<Callout title="참고 문헌" variant="note">
+- [Oracle - Persistence Intro](https://docs.oracle.com/javaee/7/tutorial/persistence-intro001.htm#BNBQA)
+- SQL Antipatterns (도서)
+- [PostgreSQL 공식문서](https://www.postgresql.org/docs/)
+- [GeeksforGeeks - CASCADE in SQL](https://www.geeksforgeeks.org/sql/cascade-in-sql/)
+</Callout>

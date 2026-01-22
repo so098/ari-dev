@@ -29,13 +29,23 @@ const authors = await parseAuthors(entry.data.authors ?? [])
     {
       entry.data.image && (
         <div class="max-w-3xs sm:shrink-0">
-          <Image
-            src={entry.data.image}
-            alt={entry.data.title}
-            width={1200}
-            height={630}
-            class="object-cover"
-          />
+          {typeof entry.data.image === 'string' ? (
+            <img
+              src={entry.data.image}
+              alt={entry.data.title}
+              width={1200}
+              height={630}
+              class="object-cover"
+            />
+          ) : (
+            <Image
+              src={entry.data.image}
+              alt={entry.data.title}
+              width={1200}
+              height={630}
+              class="object-cover"
+            />
+          )}
         </div>
       )
     }

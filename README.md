@@ -106,7 +106,7 @@ export const SITE: Site = {
   title: 'astro-erudite',
   description: // ...
   href: 'https://ari-dev-three.vercel.app',
-  featuredPostCount: 2,
+  featuredPostCount: 4,
   postsPerPage: 3,
 }
 

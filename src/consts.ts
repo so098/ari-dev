@@ -6,7 +6,7 @@ export const SITE: Site = {
   href: 'https://ari-dev-three.vercel.app',
   author: 'ari',
   locale: 'ko',
-  featuredPostCount: 2,
+  featuredPostCount: 4,
   postsPerPage: 3,
 }
 

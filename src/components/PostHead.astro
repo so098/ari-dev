@@ -10,7 +10,12 @@ const { post } = Astro.props
 
 const title = post.data.title || SITE.title
 const description = post.data.description || SITE.description
-const image = new URL('/static/1200x630.png', Astro.site)
+const defaultImage = new URL('/static/1200x630.png', Astro.site)
+const postImage = post?.data?.image
+  ? typeof post.data.image === 'string'
+    ? `${SITE.href}${post.data.image}`
+    : `${SITE.href}${post.data.image.src}`
+  : defaultImage
 const author = post.data.authors ? post.data.authors.join(', ') : SITE.author
 ---
 
@@ -21,10 +26,7 @@ const author = post.data.authors ? post.data.authors.join(', ') : SITE.author
 
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
-<meta
-  property="og:image"
-  content={`${SITE.href}${post?.data?.image?.src}` || image}
-/>
+<meta property="og:image" content={postImage} />
 <meta property="og:image:alt" content={title} />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content={SITE.locale} />
@@ -34,10 +36,7 @@ const author = post.data.authors ? post.data.authors.join(', ') : SITE.author
 
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
-<meta
-  property="twitter:image"
-  content={`${SITE.href}${post?.data?.image?.src}` || image}
-/>
+<meta property="twitter:image" content={postImage} />
 <meta name="twitter:image:alt" content={title} />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content={author} />
