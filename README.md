@@ -38,9 +38,7 @@ npm run dev
 src/
 ├── components/     # Astro/React 컴포넌트
 ├── content/
-│   ├── blog/       # 블로그 글 (MDX/MD)
-│   ├── authors/    # 작성자 프로필
-│   └── projects/   # 프로젝트
+│   └── blog/       # 블로그 글 (MDX/MD)
 ├── layouts/        # 페이지 레이아웃
 ├── pages/          # 라우팅
 ├── styles/         # 글로벌 스타일

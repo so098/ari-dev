@@ -4,7 +4,7 @@ description: "AI 이미지 생성 서비스를 1년 4개월간 혼자 프론트�
 date: "2025-03-22"
 tags: ['frontend', 'career']
 image: '/static/1200x630.png'
-authors: ["ari"]
+
 ---
 
 사내 디자이너들이 AI로 이미지를 더 쉽게 만들 수 있게 해주는 웹 서비스를 맡았다.<br/>

@@ -16,7 +16,7 @@ const postImage = post?.data?.image
     ? `${SITE.href}${post.data.image}`
     : `${SITE.href}${post.data.image.src}`
   : defaultImage
-const author = post.data.authors ? post.data.authors.join(', ') : SITE.author
+const author = SITE.author
 ---
 
 <title>{`${title} | ${SITE.title}`}</title>
