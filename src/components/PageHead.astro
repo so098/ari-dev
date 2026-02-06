@@ -10,9 +10,10 @@ const { title = SITE.title, description = SITE.description } = Astro.props
 const image = new URL('/static/1200x630.png', Astro.site)
 ---
 
+<meta name="google-site-verification" content="7LbUEBF3eSRmNHG6u_WtAT69JKDMpZeRdvTj6rPRVlM" />
 <title>{`${title} | ${SITE.title}`}</title>
 <meta name="description" content={description} />
-<link rel="canonical" href={SITE.href} />
+<link rel="canonical" href={Astro.url} />
 
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
@@ -22,3 +23,12 @@ const image = new URL('/static/1200x630.png', Astro.site)
 <meta property="og:locale" content={SITE.locale} />
 <meta property="og:site_name" content={SITE.title} />
 <meta property="og:url" content={Astro.url} />
+
+<script type="application/ld+json" set:html={JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": SITE.title,
+  "description": SITE.description,
+  "url": SITE.href,
+  "inLanguage": SITE.locale
+})} />
