@@ -21,7 +21,7 @@ import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  site: 'https://ari-dev-three.vercel.app',
+  site: 'https://ari.io.kr',
   integrations: [
     expressiveCode({
       themes: ['github-light', 'github-dark'],

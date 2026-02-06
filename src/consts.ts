@@ -3,7 +3,7 @@ import type { IconMap, SocialLink, Site } from '@/types'
 export const SITE: Site = {
   title: 'ari Space',
   description: '프론트엔드 개발자 ari의 기술과 경험을 기록하는 공간입니다.',
-  href: 'https://ari-dev-three.vercel.app',
+  href: 'https://ari.io.kr',
   author: 'ari',
   locale: 'ko',
   featuredPostCount: 4,
