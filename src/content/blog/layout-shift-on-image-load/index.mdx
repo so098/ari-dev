@@ -51,7 +51,7 @@ Reflow란 브라우저 렌더링 과정 중 첫 번째 레이아웃이 일어난
 ---
 
 ## 이미지 로딩이 UI에 미치는 영향
-<img src="/image-road-default.gif" alt="로딩 데모" width="400" />
+<img src="/blog/layout-shift/image-road-default.gif" alt="로딩 데모" width="400" />
 
 
 API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,이미지마다 요청 및 로딩 시점이 달라지고,
@@ -87,7 +87,7 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
 **구현 방법**: `Promise.all()` 및 `Promise.allSettled(권장)`을 사용해 이미지들이 모두 로드될 때까지 기다렸다가 한꺼번에 렌더링합니다.
 
-<img src="/load-all-at-once-image.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
+<img src="/blog/layout-shift/load-all-at-once-image.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
 
 ```ts  collapse={1-11,35-55}
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
@@ -163,7 +163,7 @@ API로 받아온 이미지는 JavaScript 실행 후 렌더링되기 때문에,�
 
 **구현 방법**: `<img>` 태그의 onLoad 이벤트를 사용해 이미지가 로드되면 opacity 값과 transition 등을 고려한 부드러운 전환 처리를 하여 Skeleton 위에 자연스럽게 표시되도록 합니다.
 
-<img src="/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
+<img src="/blog/layout-shift/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="400" />
 ```ts collapse={1-22,27-35,53-57}
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -251,7 +251,7 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 <br/>Next.js의 `next/image` 컴포넌트에서는 `placeholder="blur"`와 `blurDataURL` 속성을 사용해 구현할 수 있으며
 <br/>`blurDataURL`은 base64로 인코딩된 저용량 이미지이며, `plaiceholder` 등의 도구를 사용해 생성할 수 있습니다.
 <br/>**React 환경에서는 직접 구현이 복잡**할 수 있으나, **Next.js의 `next/image` 컴포넌트를 사용하면 비교적 쉽게 적용 가능**합니다.
-<img src="/blur-next-image.gif" alt="블러 이미지 데모" width="400" />
+<img src="/blog/layout-shift/blur-next-image.gif" alt="블러 이미지 데모" width="400" />
 [plaiceholder 예시](https://with-next.plaiceholder.co/)
 
 |  |  |
@@ -272,8 +272,8 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 <div class="flex gap-4 my-4 max-sm:flex-col">
   <div class="border rounded-xl px-3 py-5">
     <h4 class="text-lg font-semibold m-0">적용 전</h4>
-    <img src="/image-road-default.gif" alt="로딩 데모" width="320" class="mx-auto"/>
-    <img src="/cls-image-road-default.png" alt="기본 로드 cls" className=' mb-0' width="100%" height="200px"/>
+    <img src="/blog/layout-shift/image-road-default.gif" alt="로딩 데모" width="320" class="mx-auto"/>
+    <img src="/blog/layout-shift/cls-image-road-default.png" alt="기본 로드 cls" className=' mb-0' width="100%" height="200px"/>
 	<p class="text-center text-[0.7rem] text-gray-400 mb-3 mt-0">Cumulative Layout Shift (CLS) 점수</p>
     <div class="text-[0.8rem] ">
 	<b>Skeleton UI 적용 전</b><br />
@@ -284,8 +284,8 @@ Skeleton이 이미지 공간만 확보하는 반면, 이 방식은 **실제 이�
 
   <div class="border rounded-xl px-3 py-5">
     <h4 class="text-lg font-semibold m-0 ">적용 후</h4>
-    <img src="/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="320" class="mx-auto" />
-    <img src="/cls-after-image-road.png" alt="개선 로드 cls" className='  mb-0' width="100%" />
+    <img src="/blog/layout-shift/differently-each-image-load.gif" alt="전체 이미지 한번에 로드 데모" width="320" class="mx-auto" />
+    <img src="/blog/layout-shift/cls-after-image-road.png" alt="개선 로드 cls" className='  mb-0' width="100%" />
 	<p class="text-center text-[0.7rem] text-gray-400 mb-3 mt-0">Cumulative Layout Shift (CLS) 점수</p>
     <div  class="text-[0.8rem]">
       <b>Skeleton UI 적용 이후</b><br />
