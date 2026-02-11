@@ -1,0 +1,64 @@
+---
+import BlogCard from '@/components/BlogCard.astro'
+import Breadcrumbs from '@/components/Breadcrumbs.astro'
+import PageHead from '@/components/PageHead.astro'
+import PaginationComponent from '@/components/ui/pagination'
+import { SITE } from '@/consts'
+import Layout from '@/layouts/Layout.astro'
+import { getAllBooks, groupBooksByYear } from '@/lib/data-utils'
+import type { PaginateFunction } from 'astro'
+
+export async function getStaticPaths({
+  paginate,
+}: {
+  paginate: PaginateFunction
+}) {
+  const allBooks = await getAllBooks()
+  return paginate(allBooks, { pageSize: SITE.postsPerPage })
+}
+
+const { page } = Astro.props
+
+const booksByYear = groupBooksByYear(page.data)
+const years = Object.keys(booksByYear).sort((a, b) => parseInt(b) - parseInt(a))
+---
+
+<Layout>
+  <PageHead slot="head" title="Book" />
+  <Breadcrumbs
+    items={[
+      { label: 'Book', href: '/book', icon: 'lucide:book-open' },
+      { label: `Page ${page.currentPage}`, icon: 'lucide:folder-open' },
+    ]}
+  />
+  <section class="border-b pb-5">
+    <p class="text-muted-foreground text-sm">
+      기획, 개발, 일하는 방식에 영향을 준 책들을,<br />
+      줄거리 요약이 아닌 제 기준과 경험에 비춰 정리하는 공간입니다.
+    </p>
+  </section>
+
+  <div class="flex min-h-[calc(100vh-18rem)] flex-col gap-y-8">
+    {
+      years.map((year) => (
+        <section class="flex flex-col gap-y-4">
+          <div class="font-medium">{year}</div>
+          <ul class="flex flex-col gap-4">
+            {booksByYear[year].map((book) => (
+              <li>
+                <BlogCard entry={book} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+
+  <PaginationComponent
+    currentPage={page.currentPage}
+    totalPages={page.lastPage}
+    baseUrl="/book/"
+    client:load
+  />
+</Layout>

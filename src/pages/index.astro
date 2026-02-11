@@ -45,6 +45,15 @@ const blog = await getRecentPosts(SITE.featuredPostCount)
           >&rarr;</span
         >
       </Link>
+      <Link
+        href="/book"
+        class={buttonVariants({ variant: 'ghost' }) + ' group'}
+      >
+        See all books <span
+          class="ml-1.5 transition-transform group-hover:translate-x-1"
+          >&rarr;</span
+        >
+      </Link>
     </div>
   </section>
 </Layout>
