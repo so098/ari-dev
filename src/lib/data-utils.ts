@@ -76,3 +76,47 @@ export async function getPostsByTag(
   const posts = await getAllPosts()
   return posts.filter((post) => post.data.tags?.includes(tag))
 }
+
+export async function getAllBooks(): Promise<CollectionEntry<'book'>[]> {
+  const books = await getCollection('book')
+  return books
+    .filter((book) => !book.data.draft)
+    .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+}
+
+export async function getRecentBooks(
+  count: number,
+): Promise<CollectionEntry<'book'>[]> {
+  const books = await getAllBooks()
+  return books.slice(0, count)
+}
+
+export async function getAdjacentBooks(currentId: string): Promise<{
+  prev: CollectionEntry<'book'> | null
+  next: CollectionEntry<'book'> | null
+}> {
+  const books = await getAllBooks()
+  const currentIndex = books.findIndex((book) => book.id === currentId)
+
+  if (currentIndex === -1) {
+    return { prev: null, next: null }
+  }
+
+  return {
+    next: currentIndex > 0 ? books[currentIndex - 1] : null,
+    prev: currentIndex < books.length - 1 ? books[currentIndex + 1] : null,
+  }
+}
+
+export function groupBooksByYear(
+  books: CollectionEntry<'book'>[],
+): Record<string, CollectionEntry<'book'>[]> {
+  return books.reduce(
+    (acc: Record<string, CollectionEntry<'book'>[]>, book) => {
+      const year = book.data.date.getFullYear().toString()
+      ;(acc[year] ??= []).push(book)
+      return acc
+    },
+    {},
+  )
+}
