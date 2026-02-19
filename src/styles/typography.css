@@ -8,11 +8,11 @@
     }
 
     h1 {
-      @apply text-foreground mt-0 mb-6 scroll-m-20 text-4xl leading-5 font-medium;
+      @apply text-foreground mt-0 mb-6 scroll-m-20 text-4xl leading-snug font-medium;
     }
 
     h2 {
-      @apply text-foreground mt-8 mb-4 scroll-m-20 text-2xl leading-5 font-medium;
+      @apply text-foreground mt-8 mb-4 scroll-m-20 text-2xl leading-snug font-medium;
     }
 
     h3 {
