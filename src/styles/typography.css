@@ -81,7 +81,7 @@
     }
 
     th {
-      @apply px-4 py-2 font-medium;
+      @apply min-w-[120px] px-4 py-2 font-medium whitespace-nowrap;
       @apply text-left [&[align=center]]:text-center [&[align=right]]:text-right;
     }
 
@@ -90,7 +90,7 @@
     }
 
     td {
-      @apply fix-margin text-foreground/80 small px-4 py-2 align-top break-words;
+      @apply fix-margin text-foreground/80 small min-w-[120px] px-4 py-2 align-top;
       @apply text-left [&[align=center]]:text-center [&[align=right]]:text-right;
     }
     img,
