@@ -1,0 +1,295 @@
+---
+title: '"다시 한다면 어떻게 할까" — 인증 아키텍처 회고와 개선안'
+description: 'HttpOnly 쿠키 하이브리드 인증 구조를 운영하면서 아쉬웠던 결정들을 돌아보고, 백엔드 직접 Set-Cookie 회귀, CSP 1일차 도입, Refresh Token Rotation, 쿠키 Path/Prefix 보수화, 옵저버빌리티까지 다음에 다시 한다면 바꿀 다섯 가지를 정리합니다.'
+date: '2026-05-12'
+tags: ['frontend', 'security', 'authentication']
+image: "/static/1200x630.png"
+
+---
+
+import Callout from '@/components/Callout.astro'
+
+이전 두 글에서는 이 프로젝트에서 **어떻게 결정했고**([1편](/blog/authentication-architecture)) **HttpOnly 쿠키만으로 막을 수 없는 영역**([2편](/blog/httponly-cookie-security-limits))을 정리했습니다. 이번 글은 운영하면서 보였던 한계와 "다시 한다면 이 부분은 다르게 갈 것"이라고 적어둔 회고입니다.
+
+크게 여섯 가지입니다. 한 줄로 요약하면:
+
+1. **갱신·로그아웃의 쿠키 처리도 백엔드로 통일** — 로그인은 이미 백엔드 Set-Cookie인데 갱신·로그아웃만 Next.js로 떨어져 있는 비대칭을 없애기
+2. **CSP를 1일차부터** — XSS의 진짜 1차 방어선
+3. **Refresh Token Rotation 기본 탑재** — 무한 갱신 시나리오 자동 차단
+4. **쿠키 Path/Prefix 보수화** — `Path=/api/auth/refresh`, `__Host-` prefix
+5. **옵저버빌리티를 처음부터** — refresh 호출 패턴 로깅 없이는 이상 행동도 못 봄
+6. **JWT + Middleware 조합을 한 번은 진지하게 저울질** — 지금 Middleware의 한계를 정직하게 보고 결정하기
+
+---
+
+## 1. 갱신·로그아웃의 쿠키 처리도 백엔드로 통일
+
+[1편](/blog/authentication-architecture#3-httponly-cookie-하이브리드-채택)에서 본 것처럼 지금 구조는 비대칭입니다:
+
+- **로그인**: 백엔드가 응답에 `Set-Cookie: refresh_token`을 직접 내려보냄 (Next.js를 거치지 않음)
+- **갱신·로그아웃**: Next.js API Route(`/api/auth/refresh`, `/api/auth/logout`)가 쿠키를 읽고 백엔드 호출 / 쿠키 만료를 담당
+
+원래는 모든 인증 엔드포인트가 백엔드 쿠키 처리였는데, 갱신·로그아웃만 점진적 리팩토링 과정에서 Next.js 쪽으로 옮겨졌고 로그인은 그대로 남았습니다. **결과적으로 같은 `refresh_token` 쿠키의 라이프사이클이 두 레이어에 걸쳐 관리되는 셈**입니다.
+
+운영하면서 비용이 보였습니다:
+
+- **디버깅 양면**: 쿠키가 안 들어오면 "로그인은 백엔드, 갱신은 Next.js" 중 어느 쪽 응답을 봐야 할지 매번 헷갈림
+- **속성 일치 책임이 두 곳에**: 로그인의 백엔드 `Set-Cookie`와 갱신의 `response.cookies.set` 옵션(SameSite, Path, Max-Age 등)이 정확히 같아야 브라우저가 같은 쿠키로 인식. 한쪽만 바뀌면 사일런트 버그
+- **런타임 제약**: Next.js의 edge/node 런타임 차이, cookie API 변동에 갱신·로그아웃이 영향 받음
+- **모바일/CLI 클라이언트 호환성**: 같은 백엔드를 다른 클라이언트가 쓰면 Next.js를 거치지 않으니 refresh를 또 백엔드에 새로 노출해야 함
+
+다시 한다면 **갱신·로그아웃도 백엔드가 직접 처리**해서 비대칭을 없애겠습니다. 그러면:
+
+- `refresh_token` 쿠키의 발급·회전·만료가 백엔드 한 곳에 모임 → 속성 불일치 사일런트 버그 차단
+- 프런트는 `withCredentials: true`만 켜면 끝
+- CORS 설정 정도가 추가 작업이지만 한 번 잡으면 됨
+
+<Callout title="언제 Next.js 변환 레이어가 정당화되는가" variant="note">
+백엔드를 절대 못 건드리는 환경(레거시·외부 협력사 API)에서 프런트만으로 보안 한 단계를 올리고 싶을 때는 여전히 합리적입니다. 다만 그 경우에도 **로그인·갱신·로그아웃을 한 레이어로 통일**하는 게 우선이고, "임시 보강"이라는 점을 문서화해두지 않으면 영구 설계로 굳어집니다.
+</Callout>
+
+---
+
+## 2. CSP를 1일차부터
+
+[2편](/blog/httponly-cookie-security-limits#xss가-발생하면-실제로-어디까지-뚫리는가)에서 본 시나리오의 공통 원인은 결국 **XSS가 실행되는 것**입니다. HttpOnly·SameSite·메모리 저장 등은 모두 "XSS가 뚫린 뒤"의 피해를 줄이는 방어지, XSS 자체를 막지는 못합니다.
+
+XSS의 진짜 1차 방어는 **CSP(Content Security Policy)** 헤더입니다. React JSX의 자동 이스케이프는 우리가 쓴 코드에서 사용자 입력을 안전하게 렌더링해주지만, `dangerouslySetInnerHTML`이나 서드파티 라이브러리 안에 숨어 있는 위험에는 무력합니다. CSP는 "허용된 출처의 스크립트만 실행"이라는 브라우저 레벨 화이트리스트라 적용 범위가 다릅니다.
+
+다시 한다면:
+
+1. **Report-Only 모드로 먼저 켜기** — `Content-Security-Policy-Report-Only` 헤더로 위반 패턴을 수집. 운영에 영향 없음
+2. **위반 보고서 0건 유지** — 모든 인라인 스크립트/스타일을 nonce 또는 hash로 정리
+3. **Enforcing 전환** — `Content-Security-Policy`로 승격
+
+처음부터 Report-Only로라도 켜두지 않으면 나중에 도입할 때 "위반이 너무 많아서 다 정리하기 부담스럽다"는 이유로 미뤄지기 쉽습니다. 시작 시점에 켜는 비용이 가장 쌉니다.
+
+---
+
+## 3. Refresh Token Rotation 기본 탑재
+
+이건 사실 [2편의 마지막 콜아웃](/blog/httponly-cookie-security-limits#xss가-뚫렸을-때를-가정한-완화책-백엔드-협업-필요)에서 언급만 하고 도입하지 않았던 항목입니다. 단순성을 위해 미뤘지만, **비용 대비 효과가 너무 큽니다**.
+
+핵심 아이디어:
+
+- refresh할 때마다 새 refreshToken을 발급하고 **이전 토큰은 무효화**
+- 같은 refreshToken이 두 번 사용되면 = "탈취된 토큰이 동시에 쓰이는 중"으로 간주
+- 해당 사용자의 모든 토큰을 강제 폐기 → 정상 사용자에게도 재로그인 요구
+
+이게 있으면 2편에서 본 "XSS 활성 상태에서 refresh를 무한 갱신" 시나리오를 자동 감지할 수 있습니다. 공격자가 갱신해서 받은 새 토큰이 정상 사용자의 다음 갱신과 충돌하는 순간 폐기 트리거가 작동합니다.
+
+다시 한다면 **백엔드 인증 모델 1차 구현에 같이 넣을 항목**입니다. 나중에 끼워 넣으려면 토큰 발급/검증 로직 전반을 손대야 해서 비용이 커집니다.
+
+---
+
+## 4. 쿠키 Path / Prefix 보수화
+
+[1편의 채택 옵션](/blog/authentication-architecture#채택한-쿠키-옵션-구성)에서는 별 고민 없이 `path: '/'`, 도메인 별칭(`Domain`) 없음으로 설정했습니다. 동작에는 문제가 없지만, 운영해 보니 **쿠키가 굳이 갈 필요 없는 곳까지 따라다닌다**는 점이 걸렸습니다. Path 제한과 `__Host-` prefix를 통해 "노출 면적"을 더 줄일 수 있었습니다.
+
+### 4-1. Path 제한 — "이 쿠키, 어디까지 따라가게 할 거야?"
+
+쿠키의 `Path` 속성은 **이 쿠키가 어떤 URL 경로의 요청에 자동 첨부될지를 정합니다.** `Path=/`로 두면 같은 도메인의 **모든 경로**에서 자동 전송됩니다.
+
+지금 설정(`Path=/`)에서 실제로 어떻게 동작하는지 보면:
+
+```
+브라우저 쿠키 저장소:
+  refresh_token (Path=/, HttpOnly, Secure, SameSite=Lax)
+
+→ GET /api/users          : 쿠키 자동 첨부 ✗ 사실은 필요 없음
+→ POST /api/orders        : 쿠키 자동 첨부 ✗ 사실은 필요 없음
+→ GET /dashboard          : 쿠키 자동 첨부 ✗ 사실은 필요 없음
+→ POST /api/auth/refresh  : 쿠키 자동 첨부 ✓ 진짜로 필요
+→ POST /api/auth/logout   : 쿠키 자동 첨부 ✓ 진짜로 필요
+```
+
+전송된다고 해서 백엔드가 그 값을 쓰는 건 아니지만, **HTTP 요청 헤더에 토큰이 매번 같이 흐른다는 것 자체가 노출 면적**입니다. 로깅 설정이 잘못된 미들웨어, 디버깅용 프록시, APM 도구 등에서 우연히 쿠키 값이 평문으로 캡처될 수 있습니다.
+
+`Path=/api/auth`로 좁히면 이렇게 바뀝니다:
+
+```
+브라우저 쿠키 저장소:
+  refresh_token (Path=/api/auth, HttpOnly, Secure, SameSite=Lax)
+
+→ GET /api/users          : 쿠키 미전송 (Path 매치 안 함)
+→ POST /api/orders        : 쿠키 미전송
+→ GET /dashboard          : 쿠키 미전송
+→ POST /api/auth/refresh  : 쿠키 전송 ✓
+→ POST /api/auth/logout   : 쿠키 전송 ✓
+```
+
+부가 효과:
+
+- 일반 API 호출 30여 개에 쿠키가 아예 첨부되지 않음 → 사고로 새는 면적 축소
+- [2편의 SameSite Lax 빈틈](/blog/httponly-cookie-security-limits#samesite-lax의-한계) 중 "GET 통과" 시나리오의 공격 표면도 같이 줄어듦 (외부 사이트가 `<a href="https://example.com/api/something">`을 만들어도 그 경로엔 쿠키가 안 가니까)
+- 백엔드의 일반 API 미들웨어가 실수로 `req.cookies.refresh_token`을 참조해도 그냥 `undefined`라 사고 차단
+
+<Callout title="Path는 보안 경계가 아니다" variant="note">
+주의: Path 제한은 어디까지나 **"쿠키가 자동 첨부되는 범위"를 줄이는** 장치일 뿐, 공격자가 의도적으로 우회하는 걸 막진 않습니다. 같은 출처에서 `fetch('/api/auth/refresh')`를 직접 호출하면 어차피 쿠키가 첨부됩니다. Path는 **"실수로 노출될 면적"을 줄이는 위생 조치**로 이해해야 합니다.
+</Callout>
+
+### 4-2. `__Host-` prefix — 이름만 바꿔도 브라우저가 안전장치를 강제한다
+
+`Set-Cookie` 헤더에서 **쿠키 이름이 `__Host-`로 시작**하면, 브라우저는 그 쿠키를 받기 전에 다음 세 가지가 모두 만족되는지 검사합니다. 하나라도 어긋나면 **쿠키 자체를 거부**합니다.
+
+| 강제 조건 | 안 지키면 | 왜 중요한가 |
+|---|---|---|
+| `Secure` 속성 필수 | 쿠키 거부 | HTTP 평문으로는 절대 전송되지 않음 (MITM 차단) |
+| `Path=/` 필수 | 쿠키 거부 | 위의 Path 제한과는 양자택일 |
+| `Domain` 속성 금지 | 쿠키 거부 | **현재 호스트에만 묶임 → 서브도메인 간 공유 불가** |
+
+이름만 `refresh_token` → `__Host-refresh_token`으로 바꾸는 거라 코드 변경량은 작지만, 보호 효과는 큽니다. 특히 세 번째 조건이 핵심입니다.
+
+#### 왜 "Domain 속성 금지"가 중요한가
+
+`Domain=.example.com`처럼 도메인 별칭을 두면 그 쿠키는 `app.example.com`, `admin.example.com`, `blog.example.com` 등 **모든 서브도메인에 자동 전송**됩니다. [2편에서 본 두 번째 SameSite 빈틈](/blog/httponly-cookie-security-limits#2-서브도메인은-같은-사이트로-본다) — "서브도메인은 같은 사이트로 본다" — 이 공격 시나리오가 여기서 시작됩니다:
+
+```
+admin.example.com : 사용자가 로그인된 관리자 도구
+blog.example.com  : 마케팅 팀이 운영하는 워드프레스 (XSS 사고 빈번)
+
+[기존: Domain=.example.com인 쿠키]
+blog 측 XSS 스크립트가 fetch('https://admin.example.com/api/auth/refresh') 호출
+→ 브라우저: "같은 example.com이니까" 쿠키 자동 첨부
+→ admin 측 토큰이 갱신되어 공격자가 새 accessToken 획득
+
+[__Host-refresh_token으로 바꾸면]
+Domain 속성 자체가 금지되어 쿠키는 admin.example.com에만 묶임
+→ blog 측에서 같은 fetch를 호출해도 쿠키 미첨부
+→ 공격 차단
+```
+
+서브도메인이 여러 개거나, 그중 일부의 보안 수준이 낮을 가능성이 있다면 `__Host-` prefix는 거의 무조건 도입할 가치가 있습니다.
+
+### 4-3. 그래서 다시 한다면 무엇을 고를까
+
+위 두 가지는 **양자택일**입니다 (`__Host-`는 `Path=/`를 강제하니까). 무엇을 막을지에 따라 선택이 갈립니다:
+
+| 환경 | 선택 | 이유 |
+|---|---|---|
+| 서브도메인이 여러 개, 일부는 통제 밖 | **`__Host-refresh_token` + `Path=/`** | 서브도메인 간 공격을 원천 차단하는 게 더 중요한 위협 |
+| 단일 도메인 (서브도메인 거의 없음) | **`refresh_token` + `Path=/api/auth`** | 서브도메인 위험이 없으니, 노출 경로 최소화가 더 실용적 |
+| 둘 다 신경 쓰임 | **`__Host-refresh_token`** + 일반 API에서 쿠키 사용 절대 금지(코드 컨벤션) | Path를 못 좁히는 대신, 백엔드 미들웨어가 인증 외 경로에서 쿠키를 읽지 않도록 컨벤션으로 보강 |
+
+이 프로젝트는 단일 도메인이라 다시 한다면 후자(`Path=/api/auth`)로 갔을 겁니다. 다만 향후 `admin.*`, `analytics.*` 같은 서브도메인 확장 가능성이 보이면 그 시점에 `__Host-`로 전환을 검토하는 식으로요.
+
+<Callout title="구현 시 주의" variant="tip">
+- `__Host-` prefix는 **로컬 개발 환경(`http://localhost`)에서도 `Secure` 속성을 요구**합니다. 일부 브라우저는 localhost는 예외로 허용하지만, 모든 브라우저가 그렇진 않습니다. 개발 환경에선 prefix 없이 동작하다가 운영 배포 시 prefix를 붙이는 분기 처리가 필요할 수 있습니다.
+- Path 제한을 적용할 땐 **로그아웃 시 쿠키 만료(`response.cookies.delete`)도 같은 Path로 호출해야** 브라우저가 같은 쿠키로 인식해서 삭제합니다. Path가 다르면 다른 쿠키로 봐서 만료가 안 됩니다.
+</Callout>
+
+---
+
+## 5. 옵저버빌리티를 처음부터
+
+이상 행동은 **보고 있어야 보입니다**. 지금 구조에는 토큰/세션 관련 로깅이 거의 없어서, 가령 같은 사용자의 refreshToken이 갑자기 10분 안에 5번 갱신되거나 IP가 점프해도 알 수 없습니다.
+
+다시 한다면 1일차 백엔드 로깅 스키마에 다음을 포함하겠습니다:
+
+- 사용자별 refresh 호출 빈도 (rolling window)
+- 401 발생률 변화 (정상 만료 vs 토큰 오용 가능성)
+- 동일 사용자 토큰의 IP / UA 변화
+- 로그인 실패 패턴 (브루트포스 탐지의 기반)
+
+이게 있어야 [2편에서 언급한 rate limit·이상 행동 차단](/blog/httponly-cookie-security-limits#xss가-뚫렸을-때를-가정한-완화책-백엔드-협업-필요)의 기준선을 잡을 수 있습니다. 옵저버빌리티 없이 임의 임계값으로 차단하면 정상 사용자만 막히는 함정에 빠집니다.
+
+---
+
+## 6. JWT + Middleware 조합을 한 번은 진지하게 저울질
+
+[1편의 "왜 JWT를 안 썼는가?"](/blog/authentication-architecture#토큰-저장-전략-선택)에서 적었듯, JWT를 안 고른 건 백엔드가 이미 DB 조회 기반 검증 구조였고 즉시 무효화가 더 실용적이었기 때문입니다. **그때 환경에서는 맞는 결정이었다고 지금도 생각합니다.** 다만 운영하면서 "Middleware에서 더 많이 했으면 좋았을 텐데"라는 아쉬움이 반복됐고, 이 지점에서 JWT 카드를 한 번 다시 펴볼 가치가 생깁니다.
+
+### 지금 Middleware가 못 하는 것
+
+현재 Next.js Middleware는 보호 라우트 진입 시 **쿠키 존재 여부만 확인**합니다.
+
+```typescript
+// 지금 구조
+export function middleware(req) {
+  const hasRefresh = req.cookies.get('refresh_token')
+  if (!hasRefresh) return NextResponse.redirect('/login')
+  return NextResponse.next()
+}
+```
+
+이게 못 하는 일들:
+
+- **유효성 검증** — 쿠키가 있긴 한데 만료된 거면? 일단 통과시킨 뒤 클라이언트가 refresh를 호출해서야 알 수 있음
+- **권한 분기** — `/admin/*` 라우트인데 일반 사용자면? Middleware는 모르고, 페이지 컴포넌트가 렌더링된 뒤 클라이언트가 백엔드에 별도 호출해야 함
+- **사용자 식별** — 라우트별 redirect, A/B 분기, 로깅에 userId가 필요해도 Middleware는 모름
+
+해결하려면 Middleware에서 백엔드에 매번 검증 요청을 보내야 하는데, 그러면 **모든 페이지 진입에 백엔드 round-trip이 추가**됩니다. 그래서 결국 안 했고, 그 만큼 책임이 페이지/컴포넌트 단으로 흘러 들어갔습니다.
+
+### JWT를 쓰면 무엇이 가능해지는가
+
+accessToken을 JWT로 발급하면 Middleware가 **백엔드 없이 토큰을 검증**할 수 있습니다:
+
+```typescript
+// JWT 도입 시 가능해지는 구조 (개략)
+export async function middleware(req) {
+  const token = req.cookies.get('access_token')?.value
+  if (!token) return redirectTo('/login')
+
+  const payload = await verifyJWT(token, PUBLIC_KEY)  // 서명 검증 + 만료 확인
+  if (!payload) return redirectTo('/login')
+
+  // payload.role, payload.userId 등을 즉시 활용
+  if (req.nextUrl.pathname.startsWith('/admin') && payload.role !== 'admin') {
+    return redirectTo('/forbidden')
+  }
+  return NextResponse.next()
+}
+```
+
+얻는 것:
+
+- 페이지 진입 단계에서 권한·만료 검증이 끝남 → 컴포넌트가 깨끗해짐
+- 백엔드 round-trip 0회 → edge에서 처리되어 응답이 빠름
+- `payload.userId`를 헤더로 백엔드에 전달하면 백엔드도 토큰 디코딩을 한 번 덜 할 수 있음
+
+이게 정말 매력적이라, 만약 라우트별 권한 분기·SSR 개인화·B2B의 멀티 테넌시 같은 요구가 1일차부터 있는 프로젝트였다면 처음부터 JWT를 진지하게 검토했을 겁니다.
+
+### 그런데 1편의 결정 근거는 아직 유효한가
+
+JWT의 가장 큰 약점, **즉시 무효화 어려움**은 그대로입니다. accessToken을 짧게(예: 15분) 두고 Refresh Token Rotation(위 3번)으로 보완하는 게 정석이지만, 이건 다음 두 가지를 받아들이는 결정이기도 합니다:
+
+| 항목 | 영향 | 받아들일 수 있는가 |
+|---|---|---|
+| **최대 15분의 폐기 지연** | "지금 당장 차단"이 불가능, 다음 갱신 시점까지는 살아있음 | 내부 도구는 보통 OK, 금융·헬스케어는 X |
+| **키 관리 비용** | 서명 키 회전 절차, 검증 측에 키 배포, KMS/Secrets Manager 연동 | 인프라가 있으면 OK, 없으면 새 카테고리의 작업 |
+| **payload 크기** | 토큰 자체가 커짐 (수 KB) → 매 요청 헤더 부담 | 대부분 OK, IoT나 모바일 저대역에선 검토 |
+| **블랙리스트 도입 시 stateless 이점 소실** | 진짜 즉시 무효화가 필요하면 결국 DB 조회로 회귀 | "그럴 거면 왜 JWT?"라는 질문이 다시 옴 |
+
+### 그래서 다시 한다면
+
+**"JWT로 바꾼다"가 아니라 "JWT + Middleware 조합을 1주일 정도 시간 들여 진지하게 평가한다"** 가 결론입니다. 평가 기준은:
+
+- [ ] 라우트별 권한 분기가 페이지 컴포넌트에 흩어져 있는가 (있다면 Middleware로 끌어올릴 가치 큼)
+- [ ] SSR 단계에서 사용자 식별이 필요한 화면이 있는가 (개인화·A/B·로깅 등)
+- [ ] 15분 폐기 지연을 받아들일 수 있는 도메인인가 (금융·헬스케어 등은 보수적으로)
+- [ ] 키 회전·배포 인프라가 갖춰져 있거나 갖출 의향이 있는가
+
+체크박스가 두 개 이상 켜지면 JWT 도입의 ROI가 보입니다. 모두 꺼지면 지금 구조(세션 토큰 + HttpOnly 쿠키)가 여전히 정답입니다.
+
+<Callout title="중간 안: 하이브리드" variant="note">
+"refresh_token은 그대로 세션 토큰(즉시 무효화 가능), accessToken만 JWT로" 같은 하이브리드도 가능합니다. accessToken JWT의 15분 폐기 지연을 받아들이는 대신, refresh가 들어올 때 백엔드가 DB에서 사용자 상태(정지·삭제·권한 변경)를 한 번 확인하니까 **최악의 무효화 지연도 15분**으로 묶입니다. 1편의 즉시 무효화 가치와 Middleware의 자체 검증 가치를 양쪽 어느 정도 챙기는 구조입니다.
+</Callout>
+
+---
+
+## 묶어서: "다음에도 분명히 할 3가지"
+
+위 여섯 개를 모두 도입할 수도 없고 도입하는 게 항상 옳지도 않습니다. 무엇을 막을지·팀 규모·서비스 성격에 따라 우선순위가 갈립니다. 다만 **이 프로젝트와 비슷한 B2B 내부 도구를 다시 만든다면 무조건 들고 가는 세 가지**는 분명합니다:
+
+1. **백엔드가 직접 `Set-Cookie`** — 구조 단순성
+2. **CSP Report-Only를 처음부터** — XSS 1차 방어의 도입 비용을 가장 싸게
+3. **인증 관련 옵저버빌리티** — 보안 결정의 근거를 데이터로 두기
+
+나머지(Refresh Rotation, 쿠키 Path/Prefix 보수화, JWT + Middleware 평가 등)는 무엇을 막을지·요구사항이 명확해진 뒤 조건부로 추가하는 게 낫다고 봅니다. "지금은 안전한가"보다 "지금 어떻게 돌아가는지 보이는가"가 결국 더 중요한 질문이었습니다.
+
+---
+
+이전 글:
+- [1편 — "토큰을 어디에 저장할까"](/blog/authentication-architecture)
+- [2편 — "HttpOnly만 믿으면 안 된다"](/blog/httponly-cookie-security-limits)
+- [사이드 노트 — "가장 헷갈렸던 다섯 지점"](/blog/auth-architecture-hard-parts)
