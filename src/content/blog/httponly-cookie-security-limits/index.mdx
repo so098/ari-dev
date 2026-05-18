@@ -1,0 +1,197 @@
+---
+title: '"HttpOnly만 믿으면 안 된다" — XSS 활성 상태와 SameSite Lax의 한계'
+description: 'HttpOnly 쿠키가 XSS 활성 상태에서도 토큰을 완전히 지켜주지 못하는 시나리오, SameSite Lax의 세 가지 구조적 한계, CSP·Refresh Token Rotation·rate limit 같은 추가 대응책을 정리합니다.'
+date: '2026-03-18'
+tags: ['frontend', 'security', 'authentication']
+image: "/static/1200x630.png"
+
+---
+
+import Callout from '@/components/Callout.astro'
+
+[앞 글 — "토큰을 어디에 저장할까"](/blog/authentication-architecture)에서 refreshToken을 HttpOnly 쿠키에 넣는 하이브리드 구조를 채택한 이유를 정리했습니다. 이 글은 그 다음 질문에 답합니다.
+
+> **"HttpOnly 쿠키에 넣으면 진짜 안전한가?"**
+
+결론부터 말하면 **그렇지 않습니다**. HttpOnly는 "토큰 값을 외부로 빼가는" 공격은 막아주지만, XSS가 활성인 상태에서 같은 도메인 안에서 일어나는 공격까지 막아주진 않습니다. SameSite Lax도 모든 CSRF를 막아주지 않습니다. 이 글은 그 빈틈을 구체적으로 살펴봅니다.
+
+---
+
+## 보안 범위 정의
+
+모든 공격을 다 막을 수는 없으므로, 어떤 위협에 집중하고 어떤 위협은 범위 밖으로 두었는지 먼저 정리합니다. 이 글은 XSS를 중심으로 다룹니다. CSRF는 이 프로젝트 구조상 성립하지 않는 이유만 짚고, MITM 같은 전송 레이어 공격은 범위 밖입니다.
+
+### 방어 대상 (현실적 위협)
+
+**XSS를 통한 토큰 탈취**
+
+XSS(Cross-Site Scripting)는 공격자가 우리 사이트에 악성 스크립트를 심어서 실행시키는 공격입니다. 예를 들어 입력 필드에 `<script>` 태그를 넣거나, 우리가 쓰는 npm 라이브러리에 악성 코드가 숨어있는 경우입니다.
+
+XSS가 실행되면 공격자는 페이지 안의 JS로 접근 가능한 모든 데이터를 읽을 수 있습니다. 만약 토큰이 localStorage에 있다면 `getItem` 한 줄로 가져갈 수 있습니다.
+
+XSS로 인한 피해는 크게 두 종류입니다:
+
+- **토큰 탈취**: 토큰 값을 훔쳐서 외부로 가져감 → 공격자가 자기 컴퓨터에서 언제든 사용 가능. 사용자가 브라우저를 닫아도 공격이 계속됨
+- **세션 오용**: 토큰 값은 모르지만, 사용자 브라우저 안에서 대신 요청을 보냄 → 사용자가 페이지를 닫으면 공격 끝
+
+HttpOnly 쿠키는 토큰 탈취를 막습니다. 하지만 세션 오용(브라우저 안에서 대신 요청 보내기)까지 막지는 못합니다. 이 차이가 아래 내용을 이해하는 데 핵심입니다.
+
+<Callout title="이 프로젝트의 방어 전략" variant="note">
+- **1차 방어**: React의 JSX 자동 이스케이프로 XSS 자체를 차단 (사용자 입력을 렌더링할 때 `<script>` 같은 태그가 자동으로 무력화됨)
+- **2차 방어 (XSS가 뚫렸을 때)**: refreshToken을 HttpOnly 쿠키에 격리하여 JS에서 아예 접근 불가능하게 만듦. 공격자가 스크립트를 실행해도 refreshToken 값을 읽을 수 없음
+</Callout>
+
+**토큰이 유출되더라도 피해를 최소화**
+
+accessToken은 구조적으로 JS에서 읽을 수 있어야 하므로(API 헤더에 붙여야 하니까) XSS가 뚫리면 노출될 수밖에 없습니다. 이건 막을 수 없는 한계이므로, 대신 피해 범위를 줄이는 데 집중합니다:
+
+- 수명을 15분으로 짧게 설정 → 탈취해도 15분 후 만료
+- 메모리에만 저장 → 페이지를 닫으면 사라짐 (localStorage는 브라우저를 꺼도 남아있음)
+- refreshToken은 JS에서 접근 불가 → 새 토큰을 발급받을 수 없으므로 한 번 털린 토큰이 끝
+
+### 감수하기로 한 단점
+
+**새로고침 시 1회 재발급 요청**
+
+accessToken을 메모리에만 저장하기 때문에, 새로고침하면 토큰이 날아갑니다. 그래서 매 새로고침마다 refresh API를 한 번 호출해서 accessToken을 다시 받아와야 합니다. 네트워크 요청이 1회 추가되는 셈이지만, 사용자가 체감할 수준은 아니라고 판단했습니다.
+
+### 범위 밖 (Out of Scope)
+
+**CSRF (Cross-Site Request Forgery)**
+
+CSRF는 공격자가 사용자를 속여서 원치 않는 요청을 보내게 하는 공격입니다. 예를 들어 악성 사이트에 `<form action="https://example.com/api/delete" method="POST">`를 숨겨놓고, 사용자가 방문하면 자동으로 요청이 날아가는 식입니다. 쿠키는 브라우저가 자동으로 보내니까, 로그인된 사용자의 권한으로 요청이 실행됩니다.
+
+이 프로젝트에서 CSRF가 성립하지 않는 이유:
+
+- 일반 API 호출은 쿠키가 아닌 **Authorization 헤더**로 인증 → 외부 사이트에서 요청을 보내도 헤더는 자동으로 안 붙으니까 인증 실패
+- refreshToken 쿠키는 갱신·로그아웃 엔드포인트(`/api/auth/refresh`, `/api/auth/logout`)에서만 실제로 읽히며, `SameSite=Lax` 설정으로 외부 사이트의 POST 요청에는 쿠키가 전송되지 않음
+
+뒤에서 다룰 [SameSite Lax의 한계](#samesite-lax의-한계)는 이 가정이 어디까지 유효한지를 검증합니다.
+
+---
+
+## 브라우저의 쿠키 접근 제어 — 다시 보기
+
+먼저 HttpOnly가 정확히 무엇을 막아주는지부터 짚고 갑니다.
+
+| | document.cookie | HttpOnly Cookie |
+|---|---|---|
+| **JS 읽기** | 가능 | 불가 |
+| **JS 쓰기** | 가능 | 불가 |
+| **DevTools** | 보임 | 보임 (읽기 전용) |
+| **네트워크 요청** | 자동 전송 | 자동 전송 |
+| **XSS 탈취** | 가능 | 불가능 |
+
+**실제 공격 시나리오**: 공격자가 XSS로 스크립트 주입 시
+
+| 저장 방식 | 결과 |
+|---|---|
+| **localStorage** | `localStorage.getItem('token')` → 토큰 획득 |
+| **일반 쿠키** | `document.cookie` → 토큰 획득 |
+| **HttpOnly 쿠키** | `document.cookie` → 빈 문자열, 접근 불가 |
+
+핵심: HttpOnly는 "JS가 토큰 값을 직접 읽지 못하게" 만들 뿐, 브라우저가 자동으로 쿠키를 첨부해서 요청을 보내는 동작은 그대로입니다. 다음 절에서 다룰 시나리오의 출발점입니다.
+
+---
+
+## XSS가 발생하면 실제로 어디까지 뚫리는가?
+
+### HttpOnly인 refreshToken도 간접적으로 사용될 수 있다
+
+토큰 값 자체를 `document.cookie`로 훔쳐가는 건 불가능합니다. 하지만 XSS가 같은 도메인에서 실행되면, 공격자가 토큰을 직접 안 봐도 **사용**할 수 있습니다.
+
+```
+공격자의 XSS 스크립트가 피해자 브라우저에서 실행 중
+→ fetch('/api/auth/refresh')를 호출
+→ 브라우저가 HttpOnly 쿠키를 자동 첨부 (same-origin이니까)
+→ API Route가 새 accessToken을 응답 body로 반환
+→ 공격자가 그 accessToken을 읽음
+```
+
+다만 핵심은 **토큰을 외부로 유출할 수 없다**는 점에서 localStorage와 결정적으로 다릅니다:
+
+| | localStorage에 refreshToken 저장 | HttpOnly 쿠키에 refreshToken 저장 |
+|---|---|---|
+| **토큰 값 탈취** | 가능 (getItem 한 줄) | 불가능 |
+| **외부로 유출** | 가능 (공격자 서버로 전송 후 어디서든 사용) | 불가능 (토큰 값을 모름) |
+| **공격 가능 조건** | 토큰만 있으면 어디서든 | XSS 활성 상태 동안, 피해자 브라우저에서만 |
+| **사용자가 페이지 닫으면** | 공격자 여전히 7일간 사용 가능 | 공격 종료 |
+
+HttpOnly는 "토큰을 훔쳐서 가져갈 수 없게" 만드는 것이지, XSS 상태에서 요청을 대신 보내는 것까지 막지는 못합니다. 그래도 공격자가 토큰을 외부로 빼갈 수 없고, 사용자가 페이지를 닫는 순간 공격이 끝난다는 점에서 localStorage 대비 방어 수준이 확실히 높습니다.
+
+### refresh endpoint 반복 호출 문제
+
+accessToken이 15분짜리라 피해가 제한된다고 했지만, XSS가 활성인 동안 공격자가 refresh endpoint를 반복 호출하면 **사실상 만료가 없는 셈**이 됩니다.
+
+```
+XSS 스크립트가 피해자 브라우저에서 실행 중
+→ fetch('/api/auth/refresh') 호출
+→ 브라우저가 HttpOnly 쿠키 자동 첨부 (same-origin)
+→ API Route가 새 accessToken을 응답 body로 반환 ← JS에서 읽을 수 있음
+→ 15분 만료 전에 다시 refresh 호출
+→ 반복 → XSS가 살아있는 한 무한 갱신
+```
+
+<Callout title="그래도 HttpOnly가 의미 있는 이유" variant="note">
+"accessToken 15분 만료"라는 방어선은 XSS 활성 상태에서는 의미가 약해집니다. 하지만 위 표에서 정리한 것처럼, 토큰 외부 유출이 불가능하고 페이지를 닫으면 공격이 끝난다는 근본적인 제약은 여전히 유효합니다.
+</Callout>
+
+---
+
+## SameSite Lax의 한계
+
+`sameSite: 'lax'`를 골랐던 이유는 [앞 글](/blog/authentication-architecture#채택한-쿠키-옵션-구성)에 정리했습니다. 외부에서 사이트로 들어오는 GET 탐색(예: Slack에서 링크 클릭)에는 쿠키를 전송하고, 외부 사이트가 일으키는 POST에는 쿠키를 차단해서 UX와 CSRF 방어의 균형을 맞추기 위한 선택이었습니다.
+
+그러나 `sameSite: 'lax'`가 CSRF를 완전히 막아주진 않습니다. 구멍이 세 군데 있습니다.
+
+### 1. GET 요청은 그냥 통과시킨다
+
+lax는 POST만 막고 GET은 허용합니다. 외부 사이트에서 `<a href="https://example.com/api/delete/123">` 같은 링크를 클릭하게 만들면, 브라우저는 쿠키를 붙여서 GET 요청을 보냅니다. 만약 이 GET 엔드포인트가 데이터를 삭제하거나 수정하는 동작을 한다면 lax로는 못 막습니다. REST 원칙대로 **GET은 조회만 해야 하는 이유**이기도 합니다.
+
+### 2. 서브도메인은 "같은 사이트"로 본다
+
+`admin.example.com`과 `blog.example.com`은 SameSite 관점에서 같은 사이트(eTLD+1)입니다. `blog` 쪽이 뚫리면 거기서 `admin` 쪽으로 요청을 보낼 때 쿠키가 같이 갑니다. SameSite만으로는 서브도메인 간 공격을 막을 수 없습니다.
+
+### 3. 리다이렉트 체인으로 우회 가능
+
+공격자가 `evil.com → redirect → example.com`처럼 리다이렉트 체인을 구성하면, 최종 목적지로의 GET 요청에 쿠키가 붙을 수 있습니다. top-level navigation으로 취급되기 때문입니다.
+
+<Callout title="이 프로젝트에서는?" variant="note">
+refreshToken 쿠키가 갱신·로그아웃 엔드포인트(`/api/auth/refresh`, `/api/auth/logout`)에서만 실제로 읽히고, 일반 API 호출은 Authorization 헤더 기반이므로 SameSite Lax의 한계가 실질적인 위협으로 이어지지는 않습니다. 그러나 SameSite를 CSRF 방어의 **유일한** 수단으로 의존해서는 안 됩니다. 위 세 가지 빈틈을 인지한 상태에서 다른 방어층(요청 메서드 규약, 서브도메인 격리, Origin 검증 등)을 함께 설계해야 합니다.
+</Callout>
+
+---
+
+## 추가 대응 방법
+
+### XSS 자체를 줄이는 방향
+
+지금까지 본 문제들의 근본 원인은 XSS입니다. XSS만 안 뚫리면 HttpOnly의 간접 호출 시나리오도, lax의 GET 통과 시나리오도 무력화됩니다. 따라서 우선순위는 XSS 차단입니다:
+
+- **CSP(Content Security Policy) 헤더 설정**: 허용된 출처의 스크립트만 실행되게 제한. 공격자가 외부 스크립트를 주입해도 브라우저가 차단
+- **사용자 입력 검증**: React의 자동 이스케이프에만 의존하지 않고, `dangerouslySetInnerHTML` 사용을 금지하거나 DOMPurify 같은 라이브러리로 HTML sanitize
+- **서드파티 라이브러리 관리**: `npm audit` 등으로 취약한 패키지를 주기적으로 점검
+
+### XSS가 뚫렸을 때를 가정한 완화책 (백엔드 협업 필요)
+
+XSS는 "안 뚫리는 게 최선이지만 언젠가는 뚫린다"는 전제로 추가 방어를 설계해야 합니다.
+
+- **Refresh Token Rotation**: refresh할 때마다 새 refreshToken을 발급하고 이전 것을 무효화. **같은 refreshToken이 두 번 사용되면 탈취로 간주**하고 해당 사용자의 모든 토큰을 폐기합니다. 공격자와 정상 사용자가 같은 refreshToken을 동시에 쓰는 상황을 자동 감지할 수 있습니다.
+- **refresh endpoint에 rate limit 적용**: 짧은 시간 안에 비정상적으로 많은 refresh 요청이 오면 차단. 위에서 본 "무한 갱신" 시나리오의 비용을 높입니다.
+- **이상 행동 탐지/로깅**: 동일 사용자의 토큰이 짧은 시간에 다른 IP/UA에서 사용되는 패턴을 감지하면 강제 로그아웃.
+
+### SameSite 빈틈에 대한 대응
+
+- **상태 변경 API는 절대 GET을 쓰지 않는다** — REST 규약을 보안 요구사항으로 끌어올림
+- **민감한 도메인은 서브도메인 격리 대신 완전히 다른 도메인을 쓰거나, `__Host-` prefix를 사용해 서브도메인 간 쿠키 공유를 끊는다**
+- **Origin / Referer 헤더 검증** — 서버 측에서 요청 출처를 추가 확인. SameSite가 통과시킨 요청에 대해서도 한 단계 더 거름
+
+---
+
+## 마치며
+
+HttpOnly 쿠키는 강력하지만 "넣어두면 안전" 같은 마법은 아닙니다. **공격 표면이 줄어들 뿐, 사라지지 않습니다.** 특히 XSS가 이미 실행 중인 상황에서는 HttpOnly가 의미하는 보호가 "토큰을 외부로 가져갈 수 없게" 한정된다는 점을 인지하고 있어야 합니다.
+
+이 프로젝트가 막아야 할 공격 수준에서는 HttpOnly + SameSite Lax + Authorization 헤더 기반 API 분리만으로 충분히 합리적이라고 판단했지만, 트래픽이 커지거나 외부 인터넷에 더 노출되는 서비스라면 위에 적은 추가 방어층을 같이 도입하는 것이 안전합니다.
+
+→ 의사결정 배경이 궁금하다면 [1편 — "토큰을 어디에 저장할까"](/blog/authentication-architecture)를, 운영해본 뒤 다시 한다면 무엇을 바꿀지가 궁금하다면 [3편 — "다시 한다면 어떻게 할까"](/blog/auth-architecture-retrospective)를, 이 글과 1편을 쓰면서 가장 시간을 많이 쓴 다섯 지점이 궁금하다면 [사이드 노트 — "가장 헷갈렸던 다섯 지점"](/blog/auth-architecture-hard-parts)을 참고하세요.

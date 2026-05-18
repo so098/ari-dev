@@ -1,6 +1,6 @@
 ---
-title: '"토큰을 어디에 저장하지?" — localStorage부터 HttpOnly 쿠키까지, 인증 아키텍처 선택기'
-description: 'HTTP-only Cookie 기반 토큰 관리 전략과 하이브리드 인증 아키텍처를 설계한 과정을 정리합니다. localStorage, 서버 세션, HttpOnly 쿠키 방식을 비교하고, refreshToken만 HttpOnly 쿠키로 보호하는 하이브리드 방식을 채택한 이유를 다룹니다.'
+title: '"토큰을 어디에 저장할까" — localStorage, 서버 세션, HttpOnly 쿠키 하이브리드 비교'
+description: 'localStorage, 서버 세션, HttpOnly 쿠키 하이브리드 세 가지 토큰 저장 전략을 비교하고, refreshToken만 HttpOnly 쿠키로 보호하는 하이브리드 구조를 채택한 의사결정 과정과 인증 플로우를 정리합니다.'
 date: '2026-02-24'
 tags: ['frontend', 'security', 'authentication']
 image: "/static/1200x630.png"
@@ -11,9 +11,9 @@ import Callout from '@/components/Callout.astro'
 
 이전에 맡았던 내부 프로젝트를 기준으로 설명합니다. 동시 사용자 수십 명 규모의 B2B 내부 도구이며, 백엔드 인증 구조가 이미 정해진 상태에서 프론트엔드가 할 수 있는 최선을 고른 결과입니다. 서비스 성격이나 조직 상황이 다르면 선택도 달라질 수 있습니다.
 
-## HTTP-only Cookie 기반 토큰 관리
+이 글은 **어디에 저장할지 결정한 과정**에 초점을 맞춥니다. HttpOnly 쿠키를 골랐다고 모든 게 끝나는 건 아닙니다. XSS가 활성인 상태에서의 한계, SameSite Lax의 구조적 빈틈 같은 심화 주제는 [다음 글](/blog/httponly-cookie-security-limits)에서 별도로 다룹니다.
 
-### 토큰 저장 전략 선택
+## 토큰 저장 전략 선택
 
 이 프로젝트의 백엔드는 토큰 기반 인증을 사용합니다. 프론트엔드는 토큰의 내부 구조를 전혀 알 필요 없이 그대로 전달하기만 하면 되므로, 핵심 결정은 **토큰을 어디에, 어떻게 저장하느냐**였습니다. 아래 세 가지 전략을 비교하기 전에, 먼저 웹 인증의 두 가지 큰 흐름을 짚고 넘어갑니다.
 
@@ -27,13 +27,13 @@ import Callout from '@/components/Callout.astro'
 > | **토큰 즉시 무효화** | 용이 (서버에서 세션 삭제) | 어려움 (별도 블랙리스트 필요) |
 > | **토큰 내용 열람** | 불가 (ID일 뿐, 정보는 서버에) | 가능 (Base64 디코딩하면 payload 확인 가능) |
 >
-> 이 프로젝트는 세션 쿠키 방식을 기반으로 합니다. 백엔드가 이미 랜덤 문자열 토큰을 발급하고 DB 조회로 검증하는 구조였기 때문에, 프론트엔드도 이에 맞춰 세션 쿠키 방식을 채택했습니다. 다만 refreshToken을 HttpOnly 쿠키에 저장하여 JS에서 접근할 수 없게 보호하는 것이 핵심입니다. 아래의 토큰 저장 전략 비교에서 이 구조를 선택한 이유를 설명합니다.
+> 이 프로젝트는 세션 쿠키 방식을 기반으로 합니다. 백엔드가 이미 랜덤 문자열 토큰을 발급하고 DB 조회로 검증하는 구조였기 때문에, 프론트엔드도 이에 맞춰 세션 쿠키 방식을 채택했습니다. 다만 refreshToken을 HttpOnly 쿠키에 저장하여 JS에서 접근할 수 없게 보호하는 것이 핵심입니다.
 >
 > **왜 JWT를 안 썼는가?**
 >
 > JWT를 "선택하지 않은" 게 아니라, 백엔드가 이미 서버 조회 기반 검증 구조로 만들어져 있었습니다. B2B 내부 도구로 동시 사용자가 수십 명 수준이라 JWT의 자체 검증(DB 조회 없이 서명만으로 검증) 이점이 무의미했고, 오히려 서버 조회 방식의 **즉시 무효화**(서버에서 삭제하면 끝)가 더 실용적이었습니다. JWT는 만료 전까지 블랙리스트 없이는 무효화가 불가능합니다.
 
-#### 1. 토큰 + localStorage 방식 (가장 단순한)
+### 1. 토큰 + localStorage 방식 (가장 단순한)
 
 ```
 로그인 → 서버가 accessToken + refreshToken 발급
@@ -47,7 +47,7 @@ import Callout from '@/components/Callout.astro'
 - **단점**: XSS 방어가 뚫렸을 때 refreshToken(7일짜리 장기 토큰)이 `localStorage.getItem()` 한 줄로 탈취될 수 있음
 - **비채택 이유**: refreshToken 같은 장기 토큰에 대해 한 단계 더 보호할 수 있는 선택지가 있었음
 
-#### 2. 서버 세션 방식 (전통적인 방식)
+### 2. 서버 세션 방식 (전통적인 방식)
 
 ```
 로그인 → 서버가 세션 ID 발급 + 서버 메모리/DB에 세션 저장
@@ -57,370 +57,157 @@ import Callout from '@/components/Callout.astro'
 
 - 백엔드가 직접 세션을 관리하고 쿠키를 다루는 방식
 - 토큰 자체에 정보가 없으므로 서버에서 즉시 무효화 가능
-- 현재 백엔드는 토큰을 응답 body로 반환하고 Authorization 헤더로 받는 구조 → 백엔드가 직접 쿠키를 설정하고 세션을 관리하게 바꾸려면 전면 수정 필요
-- **비채택 이유**: 백엔드 수정이 필요하고, 프론트엔드만으로 해결 가능한 방법이 있었음
+- 옵션 3과 비교하면 백엔드 변경 규모가 한 차원 큼. 옵션 3은 로그인 응답에 `Set-Cookie: refresh_token` 한 줄을 더하면 되는 수준이지만, 옵션 2는 **세션 저장소·세션 ID 발급·매 요청 DB 조회 미들웨어** 같이 인증 모델 자체를 새로 짜야 함
+- **비채택 이유**: 전통적인 세션 ID 방식으로 전환하면 인증 모델 자체를 다시 설계해야 했음. 이 프로젝트는 이미 Redis 기반의 서버 저장형 토큰 구조로 즉시 무효화가 가능했기 때문에, 그 구조는 유지한 채 refreshToken만 HttpOnly 쿠키로 보호하는 방식이 변경 비용 대비 더 실용적이었음
 
-#### 3. HttpOnly Cookie 하이브리드 (채택)
+### 3. HttpOnly Cookie 하이브리드 (채택)
 
 ```
-로그인 → 서버가 accessToken + refreshToken 발급
-       → refreshToken은 HttpOnly 쿠키에 저장 (JS 접근 불가)
-       → accessToken은 메모리에만 보관 (새로고침 시 재발급)
-       → 토큰 갱신은 Next.js API Route가 프록시
+로그인 → 클라이언트 → POST /api/login (백엔드 직접)
+       → 백엔드 응답: body로 accessToken
+                      + Set-Cookie: refresh_token=...; HttpOnly; ...
+       → 브라우저가 refreshToken 쿠키 자동 저장
+       → 클라이언트는 accessToken만 Redux 메모리에 보관
+
+갱신/로그아웃 → Next.js API Route(/api/auth/refresh, /api/auth/logout) 경유
+              → API Route가 쿠키를 읽고 백엔드 호출 / 쿠키 만료 처리
 ```
 
-- 기존 백엔드 인증 구조를 그대로 활용 (프론트엔드에 추가 인프라 불필요)
-- HttpOnly 쿠키로 refreshToken 보호 (XSS에도 탈취 불가)
-- 기존 백엔드 API 수정 없음
-- 프록시가 필요한 건 refreshToken을 다루는 3개뿐. 이 3개만 프록시가 필요한 이유는 HttpOnly 쿠키를 설정하거나 읽는 건 서버에서만 가능하기 때문:
-  - **로그인** (`/api/auth/login`): 백엔드에서 받은 refreshToken을 HttpOnly 쿠키로 설정
-  - **갱신** (`/api/auth/refresh`): 쿠키에서 refreshToken을 읽어 백엔드에 전달 → 새 accessToken 반환
-  - **로그아웃** (`/api/auth/logout`): HttpOnly 쿠키 삭제
-- 나머지 API는 accessToken이 메모리에 있으니 클라이언트가 직접 Authorization 헤더에 붙여서 백엔드에 바로 호출 → 프록시 불필요
+- 백엔드는 토큰 발급/검증 그대로 유지하면서, **로그인 응답에 `Set-Cookie: refresh_token`을 직접 내려보내는 부분만 추가**
+- 갱신·로그아웃은 Next.js API Route가 쿠키 ↔ Authorization 헤더 변환과 만료 처리를 담당 (백엔드는 헤더 기반 토큰만 검증)
+- HttpOnly 쿠키이므로 JS에서는 값을 읽을 수 없음 (XSS에도 탈취 불가)
+- 일반 API(약 30개)는 Authorization 헤더 기반 → 브라우저가 백엔드로 직접 호출, Next.js를 거치지 않음
+- 인증 관련 3개 엔드포인트는 두 경로로 갈림:
+  - **로그인** (`POST /api/login`): 클라이언트 → 백엔드 직접. 백엔드 응답의 `Set-Cookie` 헤더로 HttpOnly `refresh_token` 쿠키가 브라우저에 저장됨
+  - **갱신** (`POST /api/auth/refresh`): 클라이언트 → Next.js API Route. 쿠키에서 refreshToken을 읽어 Authorization 헤더로 백엔드에 전달 → 새 accessToken 반환
+  - **로그아웃** (`POST /api/auth/logout`): 클라이언트 → Next.js API Route. `response.cookies.delete('refresh_token')`로 HttpOnly 쿠키 삭제 (HttpOnly 쿠키는 JS에서 지울 수 없어 서버가 해야 함)
 
-<Callout title="이 방식을 선택한 이유" variant="tip">
-백엔드가 accessToken과 refreshToken을 JSON body로 내려주는 구조가 이미 정해져 있었음. localStorage에 저장하는 게 가장 단순하지만, refreshToken은 7일짜리 장기 토큰이므로 XSS에 노출되면 피해가 큼. 백엔드 수정 없이 프론트엔드에서 보안을 한 단계 올릴 수 있는 방법으로 Next.js API Route를 활용해 refreshToken만 HttpOnly 쿠키로 보호하는 하이브리드 방식을 설계함
+<Callout title="왜 로그인만 백엔드 직접인가" variant="note">
+로그인은 백엔드가 자격증명 검증 → 토큰 발급까지 한 번에 처리하는 자연스러운 지점이라, 응답에 `Set-Cookie`까지 같이 붙여 보내는 게 가장 단순했습니다. 반면 **갱신·로그아웃**은 점진적 리팩토링 과정에서 **쿠키 처리 책임을 프런트 앞단(Next.js API Route)으로 모으는 과도기적 결정**을 거쳤습니다. 갱신은 "쿠키 → 헤더 변환"이 들어가고 로그아웃은 "쿠키 만료"가 필요해서, 인증 엔드포인트와 일반 API의 책임 경계를 정리하는 과정에서 자리잡은 구조입니다. 영구 설계라기보다는 과도기라는 점은 인지하고 있었습니다.
 </Callout>
 
 | | 토큰+localStorage | 서버 세션 | HttpOnly 하이브리드 (채택) |
 |---|---|---|---|
 | **XSS 토큰 탈취** | XSS 시 노출 (localStorage) | 세션 ID만 (무효화 가능) | refresh 불가 (HttpOnly) |
-| **백엔드 수정** | 없음 | 전면 수정 | 없음 |
-| **구현 복잡도** | 낮음 | 중간 | 중간 (API Route 프록시) |
+| **백엔드 수정** | 없음 | 전면 수정 (세션 저장소·매 요청 세션 조회 신설) | 최소 (로그인 응답에 `Set-Cookie: refresh_token` 추가) |
+| **구현 복잡도** | 낮음 | 높음 | 중간 (백엔드 Set-Cookie + Next.js API Route 2개로 갱신·로그아웃 처리) |
 
----
-
-### 보안 범위 정의
-
-모든 공격을 다 막을 수는 없으므로, 어떤 위협에 집중하고 어떤 위협은 범위 밖으로 두었는지 정리합니다.
-
-이 글은 XSS를 중심으로 다룹니다. CSRF는 이 프로젝트 구조상 성립하지 않는 이유만 짚고, MITM 같은 전송 레이어 공격은 범위 밖입니다.
-
-#### 방어 대상 (현실적 위협)
-
-**XSS를 통한 토큰 탈취**
-
-XSS(Cross-Site Scripting)는 공격자가 우리 사이트에 악성 스크립트를 심어서 실행시키는 공격입니다. 예를 들어 입력 필드에 `<script>` 태그를 넣거나, 우리가 쓰는 npm 라이브러리에 악성 코드가 숨어있는 경우입니다.
-
-XSS가 실행되면 공격자는 페이지 안의 JS로 접근 가능한 모든 데이터를 읽을 수 있습니다. 만약 토큰이 localStorage에 있다면 `getItem` 한 줄로 가져갈 수 있습니다.
-
-XSS로 인한 피해는 크게 두 종류입니다:
-
-- **토큰 탈취**: 토큰 값을 훔쳐서 외부로 가져감 → 공격자가 자기 컴퓨터에서 언제든 사용 가능. 사용자가 브라우저를 닫아도 공격이 계속됨
-- **세션 오용**: 토큰 값은 모르지만, 사용자 브라우저 안에서 대신 요청을 보냄 → 사용자가 페이지를 닫으면 공격 끝
-
-HttpOnly 쿠키는 토큰 탈취를 막습니다. 하지만 세션 오용(브라우저 안에서 대신 요청 보내기)까지 막지는 못합니다. 이 차이가 아래 내용을 이해하는 데 중요합니다.
-
-<Callout title="이 프로젝트의 방어 전략" variant="note">
-- **1차 방어**: React의 JSX 자동 이스케이프로 XSS 자체를 차단 (사용자 입력을 렌더링할 때 `<script>` 같은 태그가 자동으로 무력화됨)
-- **2차 방어 (XSS가 뚫렸을 때)**: refreshToken을 HttpOnly 쿠키에 격리하여 JS에서 아예 접근 불가능하게 만듦. 공격자가 스크립트를 실행해도 refreshToken 값을 읽을 수 없음
-</Callout>
-
-**토큰이 유출되더라도 피해를 최소화**
-
-accessToken은 구조적으로 JS에서 읽을 수 있어야 하므로(API 헤더에 붙여야 하니까) XSS가 뚫리면 노출될 수밖에 없습니다. 이건 막을 수 없는 한계이므로, 대신 피해 범위를 줄이는 데 집중합니다:
-- 수명을 15분으로 짧게 설정 → 탈취해도 15분 후 만료
-- 메모리에만 저장 → 페이지를 닫으면 사라짐 (localStorage는 브라우저를 꺼도 남아있음)
-- refreshToken은 JS에서 접근 불가 → 새 토큰을 발급받을 수 없으므로 한 번 털린 토큰이 끝
-
-#### 감수하기로 한 단점
-
-아래 항목은 발생 가능성이나 영향이 낮아 별도 조치 없이 넘어갑니다.
-
-**새로고침 시 1회 재발급 요청**
-
-accessToken을 메모리에만 저장하기 때문에, 새로고침하면 토큰이 날아갑니다. 그래서 매 새로고침마다 refresh API를 한 번 호출해서 accessToken을 다시 받아와야 합니다. 네트워크 요청이 1회 추가되는 셈이지만, 사용자가 체감할 수준은 아니라고 판단했습니다.
-
-#### 범위 밖 (Out of Scope)
-
-아래 공격들은 이 프로젝트의 구조상 성립하지 않거나, 프론트엔드에서 대응할 수 없는 영역입니다.
-
-**CSRF (Cross-Site Request Forgery)**
-
-CSRF는 공격자가 사용자를 속여서 원치 않는 요청을 보내게 하는 공격입니다. 예를 들어 악성 사이트에 `<form action="https://example.com/api/delete" method="POST">`를 숨겨놓고, 사용자가 방문하면 자동으로 요청이 날아가는 식입니다. 쿠키는 브라우저가 자동으로 보내니까, 로그인된 사용자의 권한으로 요청이 실행됩니다.
-
-이 프로젝트에서 CSRF가 성립하지 않는 이유:
-- 일반 API 호출은 쿠키가 아닌 **Authorization 헤더**로 인증 → 외부 사이트에서 요청을 보내도 헤더는 자동으로 안 붙으니까 인증 실패
-- refreshToken 쿠키는 Next.js API Route(`/api/auth/*`)에서만 사용되며, `sameSite: 'lax'` 설정으로 외부 사이트의 POST 요청에는 쿠키가 전송되지 않음
-
----
-
-
-### XSS가 발생하면 실제로 어디까지 뚫리는가?
-
-#### HttpOnly인 refreshToken도 간접적으로 사용될 수 있다
-
-토큰 값 자체를 `document.cookie`로 훔쳐가는 건 불가능합니다. 하지만 XSS가 같은 도메인에서 실행되면, 공격자가 토큰을 직접 안 봐도 **사용**할 수 있습니다.
-
-```
-공격자의 XSS 스크립트가 피해자 브라우저에서 실행 중
-→ fetch('/api/auth/refresh')를 호출
-→ 브라우저가 HttpOnly 쿠키를 자동 첨부 (same-origin이니까)
-→ API Route가 새 accessToken을 응답 body로 반환
-→ 공격자가 그 accessToken을 읽음
-```
-
-핵심은 **토큰을 외부로 유출할 수 없다**는 점에서 localStorage와 결정적으로 다릅니다:
-
-| | localStorage에 refreshToken 저장 | HttpOnly 쿠키에 refreshToken 저장 |
-|---|---|---|
-| **토큰 값 탈취** | 가능 (getItem 한 줄) | 불가능 |
-| **외부로 유출** | 가능 (공격자 서버로 전송 후 어디서든 사용) | 불가능 (토큰 값을 모름) |
-| **공격 가능 조건** | 토큰만 있으면 어디서든 | XSS 활성 상태 동안, 피해자 브라우저에서만 |
-| **사용자가 페이지 닫으면** | 공격자 여전히 7일간 사용 가능 | 공격 종료 |
-
-HttpOnly는 "토큰을 훔쳐서 가져갈 수 없게" 만드는 것이지, XSS 상태에서 요청을 대신 보내는 것까지 막지는 못합니다. 그래도 공격자가 토큰을 외부로 빼갈 수 없고, 사용자가 페이지를 닫는 순간 공격이 끝난다는 점에서 localStorage 대비 방어 수준이 확실히 높습니다.
-
-#### refresh endpoint 반복 호출 문제
-
-accessToken이 15분짜리라 피해가 제한된다고 했지만, XSS가 활성인 동안 공격자가 refresh endpoint를 반복 호출하면 **사실상 만료가 없는 셈**이 됩니다.
-
-```
-XSS 스크립트가 피해자 브라우저에서 실행 중
-→ fetch('/api/auth/refresh') 호출
-→ 브라우저가 HttpOnly 쿠키 자동 첨부 (same-origin)
-→ API Route가 새 accessToken을 응답 body로 반환 ← JS에서 읽을 수 있음
-→ 15분 만료 전에 다시 refresh 호출
-→ 반복 → XSS가 살아있는 한 무한 갱신
-```
-
-<Callout title="그래도 HttpOnly가 의미 있는 이유" variant="note">
-"accessToken 15분 만료"라는 방어선은 XSS 활성 상태에서는 의미가 약해집니다. 하지만 위 표에서 정리한 것처럼, 토큰 외부 유출이 불가능하고 페이지를 닫으면 공격이 끝난다는 근본적인 제약은 여전히 유효합니다.
-</Callout>
-
-**대응 방법**
-
-이 문제의 근본 원인은 XSS 자체이므로, XSS를 막는 것이 가장 중요합니다:
-- **CSP(Content Security Policy) 헤더 설정**: 허용된 출처의 스크립트만 실행되게 제한. 공격자가 외부 스크립트를 주입해도 브라우저가 차단
-- **사용자 입력 검증**: React의 자동 이스케이프에만 의존하지 않고, `dangerouslySetInnerHTML` 사용을 금지하거나 DOMPurify 같은 라이브러리로 HTML sanitize
-- **서드파티 라이브러리 관리**: npm audit으로 취약한 패키지를 주기적으로 점검
-
-<Callout title="XSS가 뚫렸을 때의 추가 완화책 (백엔드 협업 필요)" variant="tip">
-- **Refresh Token Rotation**: refresh할 때마다 새 refreshToken을 발급하고 이전 것을 무효화. 같은 refreshToken이 두 번 사용되면 탈취로 간주하고 해당 사용자의 모든 토큰을 폐기
-- **refresh endpoint에 rate limit 적용**: 짧은 시간 안에 비정상적으로 많은 refresh 요청이 오면 차단
+<Callout title="HttpOnly로 다 끝난 게 아니다" variant="note">
+"refresh를 HttpOnly에 넣었다" = "안전하다"는 아닙니다. XSS가 활성인 동안에는 토큰을 직접 못 보더라도 refresh 엔드포인트를 대신 호출해서 새 accessToken을 받아낼 수 있고, SameSite Lax도 모든 CSRF를 막아주진 않습니다. 이 한계와 추가 대응책은 [다음 글](/blog/httponly-cookie-security-limits)에서 정리합니다.
 </Callout>
 
 ---
 
-## HttpOnly 쿠키 상세
+## 채택한 쿠키 옵션 구성
 
-### 브라우저의 쿠키 접근 제어
+로그인 시 백엔드가 응답에 붙여 내려보내는 `Set-Cookie` 헤더는 대략 다음 형태입니다. 갱신 시에는 Next.js API Route(`/api/auth/refresh`)에서 `response.cookies.set('refresh_token', ...)`로 같은 속성으로 다시 설정합니다. 각 옵션이 무엇을 막아주고 어떤 한계를 가지는지에 대한 자세한 분석은 [다음 글](/blog/httponly-cookie-security-limits)에서 다룹니다.
 
-| | document.cookie | HttpOnly Cookie |
-|---|---|---|
-| **JS 읽기** | 가능 | 불가 |
-| **JS 쓰기** | 가능 | 불가 |
-| **DevTools** | 보임 | 보임 (읽기 전용) |
-| **네트워크 요청** | 자동 전송 | 자동 전송 |
-| **XSS 탈취** | 가능 | 불가능 |
-
-**실제 공격 시나리오**: 공격자가 XSS로 스크립트 주입 시
-
-| 저장 방식 | 결과 |
-|---|---|
-| **localStorage** | `localStorage.getItem('token')` → 토큰 획득 |
-| **일반 쿠키** | `document.cookie` → 토큰 획득 |
-| **HttpOnly 쿠키** | `document.cookie` → 빈 문자열, 접근 불가 |
-
-### 쿠키 보안 옵션 조합
+```http
+# 로그인 응답 (백엔드 → 브라우저)
+HTTP/1.1 200 OK
+Set-Cookie: refresh_token=<token-value>;
+            HttpOnly;                       # JS 접근 차단
+            Secure;                         # HTTPS에서만 전송 (운영 환경)
+            SameSite=Lax;                   # 외부 사이트 POST에 쿠키 미전송
+            Max-Age=604800;                 # 7일 후 자동 만료 (60*60*24*7)
+            Path=/                          # 전체 경로에서 유효
+```
 
 ```typescript
-// src/app/api/auth/login/route.ts
+// 갱신 응답 (Next.js API Route → 브라우저)
+// src/app/api/auth/refresh/route.ts
 response.cookies.set('refresh_token', data.refresh_token, {
-    httpOnly: true,                                    // JS 접근 차단
-    secure: process.env.NODE_ENV === 'production',     // HTTPS에서만 전송
-    sameSite: 'lax',                                   // 외부 사이트 요청 시 쿠키 미전송
-    maxAge: 60 * 60 * 24 * 7,                          // 7일 후 자동 만료
-    path: '/',                                         // 전체 경로에서 유효
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 24 * 7,
+    path: '/',
 });
 ```
 
-각 옵션이 방어하는 공격:
+### Session Cookie vs Persistent Cookie — 7일로 정한 이유
 
-| 옵션 | 방어 대상 | 설명 |
-|---|---|---|
-| **httpOnly: true** | XSS 방어 | `document.cookie`, `Cookies.get()` 등 JS API로 접근 불가. 서버(API Route, Middleware)에서만 읽기 가능 |
-| **secure: true** | 중간자 공격(MITM) 방어 | HTTP 요청에서는 쿠키가 전송되지 않음. HTTPS 연결에서만 쿠키 전송. 개발 환경(localhost)에서는 false로 설정 |
-| **sameSite: 'lax'** | CSRF 방어 | 외부 사이트에서 POST 요청 시 쿠키가 전송되지 않음. 같은 사이트 내 탐색(GET)에서는 전송됨. `'strict'`: 외부에서 링크 클릭해도 쿠키 미전송 (UX 저하) / `'lax'`: 외부 링크 GET은 허용, POST는 차단 (균형점) / `'none'`: 제한 없음 (반드시 secure 필요) |
-| **maxAge** | 토큰 수명 제한 | 7일 후 브라우저가 자동으로 쿠키 삭제. refreshToken 만료와 동기화 |
-| **path: '/'** | 쿠키 전송 범위 | 모든 경로에서 쿠키 전송 (API Route, Middleware 포함) |
-
-### sameSite 'lax'를 선택한 이유
-
-```
-'strict' 문제:
-──────────────
-1. 사용자가 Slack에서 서비스 링크를 클릭
-2. 브라우저가 해당 도메인으로 이동
-3. sameSite: 'strict' → 쿠키 미전송 (외부에서 온 요청이므로)
-4. Middleware가 refresh_token 없음으로 판단 → 로그인 페이지로 리다이렉트
-5. 사용자: "분명 로그인했는데 왜 또 로그인하라고 해?"
-
-'lax'로 해결:
-──────────────
-1. 사용자가 Slack에서 서비스 링크를 클릭 (GET 요청)
-2. sameSite: 'lax' → GET 탐색에는 쿠키 전송 O
-3. Middleware가 refresh_token 확인 → 정상 통과
-4. 외부 사이트의 POST/PUT 요청에는 쿠키 미전송 → CSRF 방어 유지
-```
-
-#### SameSite Lax의 한계
-
-`sameSite: 'lax'`가 CSRF를 완전히 막아주진 않습니다. 구멍이 세 군데 있습니다.
-
-**GET 요청은 그냥 통과시킨다**
-
-lax는 POST만 막고 GET은 허용합니다. 외부 사이트에서 `<a href="https://example.com/api/delete/123">`같은 링크를 클릭하게 만들면, 브라우저는 쿠키를 붙여서 GET 요청을 보냅니다. 만약 이 GET 엔드포인트가 데이터를 삭제하거나 수정하는 동작을 한다면? lax로는 못 막습니다. REST 원칙대로 GET은 조회만 해야 하는 이유이기도 합니다.
-
-**서브도메인은 "같은 사이트"로 본다**
-
-`admin.example.com`과 `blog.example.com`은 SameSite 관점에서 같은 사이트(eTLD+1)입니다. `blog` 쪽이 뚫리면 거기서 `admin` 쪽으로 요청을 보낼 때 쿠키가 같이 갑니다. SameSite만으로는 서브도메인 간 공격을 막을 수 없습니다.
-
-**리다이렉트 체인으로 우회 가능**
-
-공격자가 `evil.com → redirect → example.com`처럼 리다이렉트 체인을 구성하면, 최종 목적지로의 GET 요청에 쿠키가 붙을 수 있습니다. top-level navigation으로 취급되기 때문입니다.
-
-<Callout title="이 프로젝트에서는?" variant="note">
-refreshToken 쿠키가 Next.js API Route(`/api/auth/*`)에서만 사용되고, 일반 API 호출은 Authorization 헤더 기반이므로 SameSite Lax의 한계가 실질적인 위협으로 이어지지 않습니다. 그러나 SameSite를 CSRF 방어의 유일한 수단으로 의존해서는 안 됩니다.
-</Callout>
-
-### Session Cookie vs Persistent Cookie
-
-쿠키에는 **수명 전략**에 따라 두 종류가 있습니다.
+쿠키 수명 전략은 두 가지입니다.
 
 | | Session Cookie | Persistent Cookie |
 |---|---|---|
 | **maxAge/expires** | 설정 안 함 | 명시적 설정 |
-| **수명** | 브라우저 프로세스 종료 시 삭제 (탭이 아닌 브라우저 세션 기준) | 설정한 기간까지 유지 |
-| **특성** | 보안이 중요한 짧은 세션에 적합 | 매번 재로그인하는 불편함을 줄이기 위한 선택 |
+| **수명** | 브라우저 프로세스 종료 시 삭제 | 설정한 기간까지 유지 |
+| **특성** | 보안이 중요한 짧은 세션에 적합 | 매번 재로그인을 줄이기 위한 선택 |
 | **보안** | 세션 노출 시간 최소화 | 기간 내 세션 유지 (탈취 윈도우 존재) |
 
-<Callout title="참고" variant="note">
-- 둘 다 탈취되면 동일하게 위험합니다. 차이는 "브라우저 종료 시 자동 삭제되느냐"뿐입니다.
-- 다만 Session Cookie가 브라우저 종료 시 반드시 삭제되는 건 아닙니다. Chrome 등 일부 브라우저는 "세션 복원" 기능으로 이전 탭과 함께 Session Cookie도 복구합니다. 즉, Session Cookie를 선택했다고 해서 "브라우저 닫으면 확실히 로그아웃된다"고 보장할 수 없습니다.
-</Callout>
-
-#### 왜 Persistent Cookie(7일)를 선택했는가
-
-이 서비스는 **B2B 내부 도구**입니다. 사용자가 하루 종일 반복적으로 접근하며, 여러 탭을 열고 닫는 게 일상적인 워크플로우입니다.
-
-Session Cookie를 검토했지만 기각한 이유:
-
-```
-Session Cookie 적용 시 시나리오:
-─────────────────────────────────
-1. 사용자가 서비스에서 작업 중
-2. 브라우저 프로세스를 종료하거나 재시작 (탭 닫기가 아닌 브라우저 자체 종료)
-3. Session Cookie 삭제 → refreshToken 소실
-4. 다시 서비스 접속 → 로그인 페이지로 리다이렉트
-5. 매번 ID/PW 입력 → 작업 흐름 중단
-
-→ 고보안·짧은 세션이 필요한 서비스에는 적합하지만,
-  매일 반복 사용하는 내부 도구에는 UX 저하가 심각함
-```
+이 서비스는 **B2B 내부 도구**입니다. 사용자가 하루 종일 반복적으로 접근하며, 여러 탭을 열고 닫는 게 일상적인 워크플로우입니다. Session Cookie를 적용하면 브라우저 재시작마다 로그인 페이지로 튕기기 때문에 매일 반복 사용하는 내부 도구에는 UX 저하가 컸습니다.
 
 **7일이라는 기간의 근거**:
 
-1. **refreshToken 만료와 동기화**: 백엔드에서 refreshToken 수명이 7일 → 쿠키도 동일하게 7일로 설정하여 서버/클라이언트 만료 시점 일치
+1. **refreshToken 만료와 동기화**: 백엔드 refreshToken 수명이 7일 → 쿠키도 동일하게 7일로 설정
 2. **주 단위 업무 사이클**: 월~금 업무 중 재로그인 없이 사용, 주말 후 월요일에 자연스럽게 재인증
 3. **보안과 편의의 균형**: 7일 이상은 탈취 시 피해 기간이 너무 길고, 1일 미만은 매일 재로그인 필요
 
-위 [쿠키 보안 옵션 조합](#쿠키-보안-옵션-조합)에서 설정한 `maxAge: 60 * 60 * 24 * 7`이 Persistent Cookie를 만드는 부분입니다. 이 값을 제거하면 Session Cookie가 됩니다.
+위 헤더의 `Max-Age=604800`(또는 갱신 코드의 `maxAge: 60 * 60 * 24 * 7`)이 이 쿠키를 Persistent Cookie로 만드는 부분입니다. 이 속성/값을 빼면 Session Cookie가 됩니다.
+
+<Callout title="참고" variant="note">
+Session Cookie라고 해서 "브라우저 닫으면 확실히 로그아웃된다"고 보장되는 건 아닙니다. Chrome 등 일부 브라우저는 "세션 복원" 기능으로 이전 탭과 함께 Session Cookie도 복구합니다.
+</Callout>
 
 ---
 
 ## accessToken을 Redux에 저장하는 이유
 
-accessToken은 두 가지 역할을 합니다: **API 인증용** (axios 헤더에 첨부) + **로그인 상태 판별용** (UI 분기). 로그인 여부를 매번 API로 확인하면 불필요한 네트워크 요청이 매 렌더링마다 추가됩니다. 서버 측 보호는 이미 Middleware가 refresh_token 쿠키로 하고 있으므로, 클라이언트는 메모리의 토큰 유무만으로 즉시 판단하면 됩니다.
+accessToken은 두 가지 역할을 합니다: **API 인증용** (axios 헤더에 첨부) + **로그인 상태 판별용** (UI 분기). 로그인 여부를 매번 API로 확인하면 불필요한 네트워크 요청이 매 렌더링마다 추가됩니다. 보호된 라우트에 대한 1차 차단은 Next.js Middleware가 `refresh_token` 쿠키 존재 여부로 처리하므로, 클라이언트는 메모리의 accessToken 유무만 보고 UI를 즉시 분기하면 됩니다.
 
 Redux가 최선이라서가 아니라 **이미 프로젝트에서 쓰고 있어서 자연스러운 선택**이었고, Redux가 없었다면 Context + useState로 했을 것입니다.
 
 ---
 
-## 인증 Flow
+## 인증 Flow 요약
 
-```
-┌─────────┐         ┌───────────────────┐         ┌─────────────┐
-│ Client  │         │ Next.js API Routes │         │ Backend API │
-└────┬────┘         └─────────┬─────────┘         └──────┬──────┘
-     │                        │                          │
-     │  ═══════════════ 로그인 ═══════════════           │
-     │                        │                          │
-     │ POST /api/auth/login   │                          │
-     │ { user_id, password }  │                          │
-     ├───────────────────────►│                          │
-     │                        │  POST /api/login         │
-     │                        ├─────────────────────────►│
-     │                        │                          │
-     │                        │  { accessToken,          │
-     │                        │    refreshToken }        │
-     │                        │◄─────────────────────────┤
-     │                        │                          │
-     │  Set-Cookie:           │                          │
-     │  refresh_token         │                          │
-     │  (httpOnly, secure)    │                          │
-     │  +                     │                          │
-     │  body: { access_token }│                          │
-     │◄───────────────────────┤                          │
-     │                        │                          │
-     │  dispatch(setAccessToken(access_token))           │
-     │  → Redux 메모리에만 저장                          │
-     │                        │                          │
-     │  ═══════════ 인증된 API 요청 ═══════════          │
-     │                        │                          │
-     │  axios로 직접 호출     │                          │
-     │  header: access-token  │                          │
-     │  (Redux에서 읽음)      │                          │
-     ├────────────────────────┼─────────────────────────►│
-     │                        │                          │
-     │  { data }              │                          │
-     │◄──────────────────────────────────────────────────┤
-     │                        │                          │
-     │  ═══════════ 토큰 만료 시 ═══════════             │
-     │                        │                          │
-     │  401 Unauthorized      │                          │
-     │◄──────────────────────────────────────────────────┤
-     │                        │                          │
-     │  POST /api/auth/refresh│                          │
-     │  (쿠키 자동 전송)      │                          │
-     ├───────────────────────►│                          │
-     │                        │  쿠키에서 refreshToken   │
-     │                        │  읽어서 헤더에 첨부      │
-     │                        │  POST /api/refresh       │
-     │                        ├─────────────────────────►│
-     │                        │                          │
-     │                        │  { newAccessToken }      │
-     │                        │◄─────────────────────────┤
-     │                        │                          │
-     │  body: { access_token }│                          │
-     │◄───────────────────────┤                          │
-     │                        │                          │
-     │  dispatch(setAccessToken(newAccessToken))          │
-     │  원래 요청 재시도                                 │
-     │                        │                          │
-     │  ═══════════ 새로고침 시 ═══════════              │
-     │                        │                          │
-     │  layout.tsx (서버 컴포넌트)                       │
-     │  cookies().get('refresh_token')                   │
-     │  → refreshToken 존재 확인                         │
-     │  → StoreProviders에 전달                          │
-     │                        │                          │
-     │  POST /api/auth/refresh│                          │
-     │  (쿠키 자동 전송)      │                          │
-     ├───────────────────────►│                          │
-     │                        ├─────────────────────────►│
-     │  { access_token }      │◄─────────────────────────┤
-     │◄───────────────────────┤                          │
-     │                        │                          │
-     │  Redux 복원 완료       │                          │
-     │                        │                          │
-```
+전체 흐름을 단계별로 정리하면 다음과 같습니다. **로그인은 백엔드로 직접 호출**되고, **갱신·로그아웃은 Next.js API Route를 거칩니다**. 일반 API도 백엔드 직접입니다.
+
+**로그인**
+
+1. 클라이언트 → `POST /api/login` (백엔드 직접)
+2. 백엔드 응답:
+   - body로 `{ accessToken }` 전달
+   - `Set-Cookie: refresh_token=...` (HttpOnly, Secure, SameSite=Lax)
+3. 브라우저가 `refresh_token` 쿠키 자동 저장
+4. 클라이언트 → `dispatch(setAccessToken(...))` → Redux 메모리 저장
+
+**일반 API 호출 (약 30개)** — Next.js를 거치지 않음
+
+- axios가 Redux에서 accessToken을 꺼내 Authorization 헤더에 첨부
+- 백엔드에 직접 요청 → 응답 수신
+
+**accessToken 만료 (401)**
+
+1. axios 인터셉터가 401 감지
+2. `POST /api/auth/refresh` 자동 호출 (Next.js API Route, 쿠키 자동 전송)
+3. API Route가 쿠키의 refreshToken을 읽어 Authorization 헤더로 백엔드에 전달 → 새 accessToken 수령
+4. API Route가 새 refreshToken을 `response.cookies.set`으로 다시 설정 + body로 accessToken 반환
+5. 새 accessToken으로 원래 요청 재시도
+6. refresh도 실패 → 로그인 페이지로 리다이렉트
+
+**새로고침**
+
+1. Redux 메모리 초기화 → accessToken 소실
+2. Next.js Middleware가 `refresh_token` 쿠키 존재 확인
+   - 없음 → 로그인 페이지로 리다이렉트
+   - 있음 → 통과
+3. 클라이언트 마운트 직후 `POST /api/auth/refresh` 호출
+4. 새 accessToken을 받아 Redux 복원
+
+**로그아웃**
+
+1. 클라이언트 → `POST /api/auth/logout` (Next.js API Route)
+2. API Route에서 `response.cookies.delete('refresh_token')`로 HttpOnly `refresh_token` 쿠키 삭제
+   (HttpOnly 쿠키는 JS에서 지울 수 없어 서버 응답으로 처리)
+3. 클라이언트 → Redux의 accessToken 비우기 → 로그인 페이지로 이동
 
 ---
 
 ## 시스템 아키텍처
 
-토큰이 어디에 저장되고, API 호출 시 어떤 경로로 전달되는지를 중심으로 정리합니다.
+토큰이 어디에 저장되고, API 호출 시 어떤 경로로 전달되는지를 정리합니다.
 
 ```
 1. 토큰 저장 위치
@@ -459,53 +246,55 @@ Redux가 최선이라서가 아니라 **이미 프로젝트에서 쓰고 있어�
   accessToken이 메모리에 있으니 바로 헤더에 붙여서 전송
 
 
-3. 인증 API 호출 (3개) — API Route가 쿠키 ↔ 헤더 변환
+3-a. 로그인 — 백엔드 직접 호출 + Set-Cookie
+────────────────────────────────────────────────────────
+
+  Browser                                     Backend
+  ┌──────────────┐                           ┌──────────────┐
+  │              │ POST /api/login           │              │
+  │  fetch       ├──────────────────────────►│  Auth API    │
+  │              │ { id, password }          │              │
+  │              │                           │  자격증명    │
+  │              │                           │  검증 + 토큰 │
+  │              │                           │  발급        │
+  │              │                           │              │
+  │              │ body: { accessToken }     │              │
+  │  Redux에     ◄───────────────────────────┤              │
+  │  accessToken │ Set-Cookie: refresh_token │              │
+  │  저장        │ (HttpOnly, Secure, Lax)   │              │
+  └──────────────┘                           └──────────────┘
+
+  refreshToken: 백엔드가 직접 Set-Cookie로 내려보냄
+  accessToken: body로 받아서 Redux에 저장
+
+
+3-b. 갱신·로그아웃 (2개) — API Route가 쿠키 ↔ 헤더 변환
 ────────────────────────────────────────────────────────
 
   Browser             API Route              Backend
-  ┌─────────┐        ┌──────────────┐       ┌──────────┐
-  │         │  POST  │              │ POST  │          │
-  │ fetch() ├───────►│ /api/auth/*  ├──────►│ Auth API │
-  │         │        │              │       │          │
-  │         │        │ [요청 변환]  │       │          │
-  │         │        │  cookie에서  │       │  토큰    │
-  │         │        │  refreshToken│       │  발급    │
-  │         │        │  꺼내서      │       │          │
-  │         │        │  Authorization│      │          │
-  │         │        │  헤더로 전달 │       │          │
-  │         │        │              │       │          │
-  │         │  body  │ [응답 변환]  │ body  │          │
-  │ access  ◄────────┤  refreshToken◄───────┤          │
-  │ Token   │        │  → Set-Cookie│       │          │
-  │ → Redux │        │  (HttpOnly)  │       │          │
-  └─────────┘        └──────────────┘       └──────────┘
+  ┌─────────┐        ┌──────────────────┐   ┌──────────┐
+  │         │  POST  │                  │   │          │
+  │ fetch() ├───────►│ /api/auth/refresh│   │ Auth API │
+  │         │        │ /api/auth/logout │   │          │
+  │         │        │                  │   │          │
+  │         │        │ [요청 변환]      │   │          │
+  │         │        │  cookie에서      │PUT│  토큰    │
+  │         │        │  refreshToken    ├──►│  검증/   │
+  │         │        │  꺼내서          │   │  회전    │
+  │         │        │  Authorization   │   │          │
+  │         │        │  헤더로 전달     │   │          │
+  │         │        │                  │   │          │
+  │         │  body  │ [응답 변환]      │   │          │
+  │ access  ◄────────┤  새 refreshToken ◄───┤          │
+  │ Token   │        │  → response      │   │          │
+  │ → Redux │        │    .cookies.set/ │   │          │
+  │         │        │    .delete       │   │          │
+  └─────────┘        └──────────────────┘   └──────────┘
 
   refreshToken: 쿠키로 자동 전송 — JS는 값을 볼 수 없음
   accessToken: body로 받아서 Redux에 저장
+  로그아웃: response.cookies.delete('refresh_token')
 ```
-
-### 새로고침 시 토큰 복원
-
-1. 페이지 새로고침 → Redux 메모리 초기화 → accessToken 소멸
-2. Middleware가 refresh_token 쿠키 존재 확인
-   - 쿠키 없음 → 로그인 페이지로 리다이렉트 (비로그인 상태)
-   - 쿠키 있음 → 일단 통과 (아래 3번으로)
-3. 클라이언트가 `POST /api/auth/refresh` 호출
-4. API Route가 쿠키의 refreshToken으로 백엔드에 재발급 요청
-   - 백엔드가 유효한 토큰으로 확인 → 새 accessToken 발급
-   - 백엔드가 만료/무효 판단 → 실패 → 로그인 페이지로 리다이렉트
-5. 새 accessToken을 받아서 Redux에 다시 저장
-6. 이후 일반 API 호출 정상 진행
-
-### 401 Unauthorized 발생 시 (accessToken 만료)
-
-1. 일반 API 호출 → 백엔드가 401 응답 (accessToken 만료)
-2. axios 인터셉터가 401을 감지
-3. 자동으로 `POST /api/auth/refresh` 호출
-4. API Route가 쿠키의 refreshToken으로 새 accessToken 발급
-   - 성공 → 새 accessToken으로 원래 요청 재시도
-   - 실패 (refreshToken도 만료) → 로그인 페이지로 리다이렉트
-5. 사용자는 이 과정을 인지하지 못함 (자동 갱신)
 
 ---
 
@@ -519,3 +308,19 @@ Redux가 최선이라서가 아니라 **이미 프로젝트에서 쓰고 있어�
 - 클라이언트 메모리에 두는 것이 SPA 구조와 자연스럽다
 
 </details>
+
+---
+
+## 다음 글
+
+여기까지가 "어디에 저장할지" 결정의 과정입니다. 하지만 HttpOnly 쿠키를 선택했다고 해서 모든 공격을 막을 수 있는 건 아닙니다. 후속 글에서는:
+
+- **XSS가 활성인 상태에서 HttpOnly 쿠키도 간접적으로 사용될 수 있다**는 시나리오
+- **SameSite Lax가 갖는 세 가지 구조적 한계** (GET 통과, 서브도메인, 리다이렉트 체인)
+- **CSP, Refresh Token Rotation, rate limit 같은 추가 대응책**
+
+을 다룹니다. → [**2편: HttpOnly만 믿으면 안 된다 — XSS 활성 상태와 SameSite Lax의 한계**](/blog/httponly-cookie-security-limits)
+
+그리고 3편에서는 운영해본 뒤 다시 한다면 무엇을 바꿀지를 정리합니다. → [**3편: 다시 한다면 어떻게 할까 — 인증 아키텍처 회고와 개선안**](/blog/auth-architecture-retrospective)
+
+1·2편을 쓰면서 가장 시간을 많이 쓴 다섯 지점을 따로 정리한 사이드 노트도 있습니다. → [**사이드 노트: 인증 아키텍처에서 가장 헷갈렸던 다섯 지점**](/blog/auth-architecture-hard-parts)
