@@ -13,7 +13,7 @@ import Callout from '@/components/Callout.astro'
 
 크게 여섯 가지입니다. 한 줄로 요약하면:
 
-1. **갱신·로그아웃의 쿠키 처리도 백엔드로 통일** — 로그인은 이미 백엔드 Set-Cookie인데 갱신·로그아웃만 Next.js로 떨어져 있는 비대칭을 없애기
+1. **갱신·로그아웃의 쿠키 처리도 백엔드로 통일** — 로그인은 이미 백엔드 Set-Cookie인데 갱신·로그아웃만 Next.js로 떨어져, 토큰 관리가 두 레이어에 흩어진 상태를 한쪽으로 모으기
 2. **CSP를 1일차부터** — XSS의 진짜 1차 방어선
 3. **Refresh Token Rotation 기본 탑재** — 무한 갱신 시나리오 자동 차단
 4. **쿠키 Path/Prefix 보수화** — `Path=/api/auth/refresh`, `__Host-` prefix
@@ -26,7 +26,7 @@ import Callout from '@/components/Callout.astro'
 
 ## 1. 갱신·로그아웃의 쿠키 처리도 백엔드로 통일
 
-[1편](/blog/authentication-architecture#3-httponly-cookie-하이브리드-채택)에서 본 것처럼 지금 구조는 비대칭입니다:
+[1편](/blog/authentication-architecture#3-httponly-cookie-하이브리드-채택)에서 본 것처럼 지금 구조는 토큰 관리가 두 레이어에 나뉘어 있습니다:
 
 - **로그인**: 백엔드가 응답에 `Set-Cookie: refresh_token`을 직접 내려보냄 (Next.js를 거치지 않음)
 - **갱신·로그아웃**: Next.js API Route(`/api/auth/refresh`, `/api/auth/logout`)가 쿠키를 읽고 백엔드 호출 / 쿠키 만료를 담당
@@ -49,7 +49,7 @@ import Callout from '@/components/Callout.astro'
 그래서 Next.js는 **각 API·페이지마다 둘 중 어디서 돌릴지 고르라**는 설계입니다 — 인증 체크처럼 가볍고 빠르면 좋은 건 Edge로, DB 조회처럼 무거운 작업은 Node로. 파일 맨 위에 `export const runtime = 'nodejs' | 'edge'` 한 줄로 직접 지정하고, 안 적으면 **라우트·페이지는 Node, 미들웨어는 Edge**가 기본입니다 — 라우트는 DB·파일 같은 무거운 작업이 많아 npm 생태계와의 호환성이 중요하고, 미들웨어는 모든 요청에 한 번씩 끼는 가벼운 작업이라 콜드스타트가 짧은 Edge가 자연스럽기 때문이에요. 다만 두 환경의 호환성이 자주 바뀌어서, 갱신·로그아웃 코드가 어느 쪽에 있든 매번 손봐야 하는 골치가 생깁니다.
 </Callout>
 
-다시 한다면 **갱신·로그아웃도 백엔드가 직접 처리**해서 비대칭을 없애겠습니다. 그러면:
+다시 한다면 **갱신·로그아웃도 백엔드가 직접 처리**해서 토큰 관리를 한 곳으로 모으겠습니다. 그러면:
 
 - `refresh_token` 쿠키의 발급·회전·만료가 백엔드 한 곳에 모임 → 양쪽 쿠키 옵션(SameSite·Path·Max-Age 등)이 어긋나 조용히 깨지는 버그가 안 생김
 - 프론트는 `withCredentials: true`만 켜면 끝
