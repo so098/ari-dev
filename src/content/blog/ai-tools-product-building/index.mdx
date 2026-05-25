@@ -131,7 +131,7 @@ export default async function DashboardPage() {
 
 클라이언트에서 `useEffect`로 불러오면 브라우저가 먼저 로딩 화면을 그리고, JavaScript가 실행된 뒤 다시 `/api/dashboard`를 호출해야 합니다. 반면 서버 컴포넌트에서 데이터를 불러오면 서버가 데이터를 채운 상태로 페이지를 내려줄 수 있어, 불필요한 클라이언트 요청과 초기 로딩 상태를 줄일 수 있습니다. 차트 라이브러리는 차트가 필요한 화면에서만 로드되도록 클라이언트 컴포넌트로 분리했습니다.
 
-또 `useSearchParams()` Suspense 경계, 클릭 가능한 `div`를 `button`으로 바꾸는 접근성 개선도 react-doctor의 지적을 기준으로 우선순위를 잡았습니다.
+또 클릭 가능한 `div`를 `button`으로 바꾸는 접근성 개선도 react-doctor의 지적을 기준으로 우선순위를 잡았습니다.
 
 </details>
 
