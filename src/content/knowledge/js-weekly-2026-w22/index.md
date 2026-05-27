@@ -1,58 +1,52 @@
 ---
 title: "JavaScript Weekly 주간 압축 요약 (2026-W22)"
-description: "W22에 주목할 만한 JavaScript 이슈를 링크별로 한국어로 풀어 정리했습니다."
+description: "JavaScript Weekly 주요 소식을 한 주 단위로 압축 정리한 글"
 category: "javascript-weekly"
 updated: "2026-05-25"
 ---
 
 ## JavaScript Weekly 주간 압축 (2026-W22)
 
-### 이번 주 한눈에 보기
-이번 주에는 패키지 설치 보안, 런타임 안정성, 프레임워크 릴리스 준비처럼 **실무 운영 품질과 직결되는 변화**가 많이 보였습니다. 특히 npm 설치 스크립트 정책 논의와 Angular/Relay 릴리스 흐름은, 팀의 배포 정책·업데이트 기준을 미리 손보는 계기로 삼기 좋습니다.
+### 이번 주 핵심 요약
+- npm/런타임/프론트엔드 생태계에서 **배포 안정성, 표준화 논의, 툴링 업데이트**가 중심 이슈였습니다.
+- 릴리스 노트 기반으로는 실무 영향(브레이킹 변경, 마이그레이션 필요 포인트) 점검이 중요합니다.
 
-### 링크별 한국어 정리 (원문 기반)
+### 링크별 요약 (TOP 10)
+1. **JavaScript Weekly Issue 786: May 19, 2026**
+   - 링크: https://javascriptweekly.com/issues/786
+   - 요약: 이번 주 JavaScript 생태계 핵심 링크를 모아둔 원문 이슈입니다. JavaScript Weekly Issue 786: May 19, 2026
+2. **JavaScript Weekly Issue 787: May 26, 2026**
+   - 링크: https://javascriptweekly.com/issues/787
+   - 요약: 이번 주 JavaScript 생태계 핵심 링크를 모아둔 원문 이슈입니다. JavaScript Weekly Issue 787: May 26, 2026
+3. **[RFC] Make install scripts opt-in by JamieMagee · Pull Request #868 · npm/rfcs · GitHub**
+   - 링크: https://github.com/npm/rfcs/pull/868
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. Public change requests/proposals & ideation. Contribute to npm/rfcs development by creating an account on GitHub.
+4. **GitHub - lirantal/npq: safely install npm packages by auditing them pre-install stage · GitHub**
+   - 링크: https://github.com/lirantal/npq
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. safely install npm packages by auditing them pre-install stage - lirantal/npq
+5. **Rewrite Bun in Rust by Jarred-Sumner · Pull Request #30412 · oven-sh/bun · GitHub**
+   - 링크: https://github.com/oven-sh/bun/pull/30412
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. Incredibly fast JavaScript runtime, bundler, test runner, and package manager – all in one - Rewrite Bun in Rust by Jarred-Sumner · Pull Request #30412 · oven-sh/bun
+6. **all of rust codebase: This codebase fails even the most basic miri checks, allows for UB in safe rust · Issue #30719 · oven-sh/bun · GitHub**
+   - 링크: https://github.com/oven-sh/bun/issues/30719
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. error: Undefined Behavior: constructing invalid value of type &[u8]: encountered a dangling reference (0x20933[noalloc] has no provenance) --> src/main.rs:97:18 | 97 | unsafe { core::slice::from_raw_parts(ptr as *const u
+7. **Release 22.0.0-rc.0 · angular/angular · GitHub**
+   - 링크: https://github.com/angular/angular/releases/tag/v22.0.0-rc.0
+   - 요약: 새 버전 릴리스로 주요 기능/변경점(일부 breaking change 포함)을 확인할 가치가 있습니다. Deliver web apps with confidence 🚀. Contribute to angular/angular development by creating an account on GitHub.
+8. **[Complete] RFC: Setting OnPush as the default Change Detection Strategy · angular/angular · Discussion #66779 · GitHub**
+   - 링크: https://github.com/angular/angular/discussions/66779
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. [Complete] RFC: Setting OnPush as the default Change Detection Strategy
+9. **GitHub - eslint/config-inspector: A visual tool for inspecting and understanding your ESLint flat configs. · GitHub**
+   - 링크: https://github.com/eslint/config-inspector
+   - 요약: 도구/라이브러리 실무 적용 포인트를 빠르게 파악할 수 있는 링크입니다. A visual tool for inspecting and understanding your ESLint flat configs. - eslint/config-inspector
+10. **Release v21.0.0 · facebook/relay · GitHub**
+   - 링크: https://github.com/facebook/relay/releases/tag/v21.0.0
+   - 요약: 새 버전 릴리스로 주요 기능/변경점(일부 breaking change 포함)을 확인할 가치가 있습니다. Relay is a JavaScript framework for building data-driven React applications. - Release v21.0.0 · facebook/relay
 
-#### 1) JavaScript Weekly Issue 786
-- 링크: https://javascriptweekly.com/issues/786
-- 핵심: 한 주간의 주요 JS 생태계 변화가 큐레이션된 이슈입니다. 개별 기술을 깊게 다루기보다는, 어떤 주제가 시장에서 빠르게 커지고 있는지 방향을 잡는 데 유용합니다.
-
-#### 2) JavaScript Weekly Issue 787
-- 링크: https://javascriptweekly.com/issues/787
-- 핵심: 전주 대비 릴리스/도구 업데이트 비중이 커졌고, 실무에 바로 연결되는 링크가 많습니다. 팀 내 기술 레이더(도입 후보, 관찰 후보)를 업데이트할 때 참고 가치가 큽니다.
-
-#### 3) npm RFC #868 (install scripts opt-in)
-- 링크: https://github.com/npm/rfcs/pull/868
-- 핵심: 패키지 설치 시 실행되는 스크립트를 기본 허용이 아니라 명시 허용으로 바꾸려는 논의입니다. 공급망 보안 관점에서 설치 단계의 위험을 줄이려는 흐름이며, CI/개발 환경에서 설치 실패 가능성과 예외 정책을 함께 설계해야 합니다.
-
-#### 4) npq (사전 점검 기반 npm 설치)
-- 링크: https://github.com/lirantal/npq
-- 핵심: 설치 전에 패키지를 점검해 위험 신호를 먼저 확인하는 도구입니다. “빠르게 설치”보다 “검증 후 설치”에 무게를 두는 팀 문화에 잘 맞고, 보안 기준을 자동화 규칙으로 문서화하기 좋습니다.
-
-#### 5) Bun PR #30412 (Rust 재작성 논의)
-- 링크: https://github.com/oven-sh/bun/pull/30412
-- 핵심: 런타임 내부 구현 안정성과 유지보수성을 강화하려는 방향의 변화로 읽힙니다. 사용자 입장에서는 성능 수치보다도, 장기적으로 호환성과 디버깅 경험이 어떻게 달라질지를 추적하는 게 중요합니다.
-
-#### 6) Bun Issue #30719 (안전성/UB 논점)
-- 링크: https://github.com/oven-sh/bun/issues/30719
-- 핵심: 런타임 저수준 안정성 이슈가 공개적으로 검증되는 과정입니다. 런타임 선택 시 벤치마크 결과만 보지 말고, 결함 리포트 처리 속도와 커뮤니티 대응 품질까지 함께 평가해야 한다는 점을 보여줍니다.
-
-#### 7) Angular v22.0.0-rc.0 릴리스
-- 링크: https://github.com/angular/angular/releases/tag/v22.0.0-rc.0
-- 핵심: 정식 버전 전 단계에서 주요 변경을 미리 점검할 수 있는 릴리스입니다. 프레임워크 업그레이드 계획이 있다면, 의존 패키지 호환성과 빌드 파이프라인 영향을 사전에 점검하는 것이 안전합니다.
-
-#### 8) Angular OnPush 기본 전략 RFC
-- 링크: https://github.com/angular/angular/discussions/66779
-- 핵심: 변경 감지 전략의 기본값을 바꾸는 논의는 렌더링 성능과 개발자 경험 모두에 영향을 줍니다. 기존 코드베이스에서 컴포넌트 상태 관리 관례를 점검해야 할 가능성이 큽니다.
-
-### 요약 불가/검증 필요 링크
-이번 주 게시글 작성 범위(위 8개 링크)에서는 요약 불가로 분류한 항목이 없습니다.
-
-### 실무 적용 포인트
-- 설치 단계 보안: 고위험 패키지 설치 차단/승인 프로세스 도입
-- 런타임 선택 기준: 성능 + 안정성 이슈 대응력(리포트 처리)까지 포함
-- 프레임워크 업데이트: RC 단계에서 사전 검증 브랜치 운영
+### 실무 적용 아이디어
+- 배포 파이프라인에 staged rollout/feature flag를 도입해 릴리스 리스크를 줄이기
+- 릴리스 노트 모니터링 자동화(의존성 업데이트 전 브레이킹 변경 감지)
+- 표준화(TC39) 동향 기반으로 코드베이스 중장기 리팩터링 우선순위 수립
 
 > [!NOTE] 용어 정리
-> - **Opt-in**: 기본 비활성 상태에서, 명시적으로 허용해야 기능이 동작하는 방식
-> - **Supply Chain Security(공급망 보안)**: 외부 의존성(패키지/빌드 도구)에서 유입되는 위험을 줄이는 보안 접근
-> - **OnPush**: Angular의 변경 감지 전략 중 하나로, 불필요한 렌더링을 줄여 성능 최적화에 도움을 주는 방식
+> - **Bun**: 빠른 JS/TS 런타임 및 번들링 도구.
