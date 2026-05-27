@@ -1,0 +1,23 @@
+---
+import { Icon } from 'astro-icon/components'
+import { Separator } from '@/components/ui/separator'
+
+interface Props {
+  slug: string
+}
+
+const { slug } = Astro.props
+---
+
+<span
+  data-views-slug={slug}
+  class="items-center gap-x-2"
+  style="display:none"
+  title="조회수"
+>
+  <Separator orientation="vertical" className="h-4!" />
+  <span class="inline-flex items-center gap-1">
+    <Icon name="lucide:eye" class="size-3" />
+    <span data-views-count></span>
+  </span>
+</span>
