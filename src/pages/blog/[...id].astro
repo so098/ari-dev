@@ -30,6 +30,7 @@ const { next, prev } = await getAdjacentPosts(currentPostId)
 ---
 
 <Layout isWide>
+  <div data-view-increment={`blog/${post.id}`} hidden></div>
   <PostHead slot="head" post={post} />
   <section
     class="grid grid-cols-[minmax(0px,1fr)_min(calc(var(--breakpoint-md)-2rem),100%)_minmax(0px,1fr)] gap-y-6"
