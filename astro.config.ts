@@ -21,6 +21,10 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   site: 'https://ari.io.kr',
+  redirects: {
+    '/blog/harness-design-for-long-running-agents':
+      '/knowledge/harness-design-for-long-running-agents',
+  },
   integrations: [
     expressiveCode({
       themes: ['github-light', 'github-dark'],
