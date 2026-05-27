@@ -49,9 +49,4 @@ updated: "2026-05-25"
 - 표준화(TC39) 동향 기반으로 코드베이스 중장기 리팩터링 우선순위 수립
 
 > [!NOTE] 용어 정리
-> - **Bun**: 빠른 JS/TS 런타임/번들러/테스트 러너를 통합한 도구체인.
-> - **staged publishing**: 패키지를 점진적으로 공개해 배포 사고 범위를 줄이는 방식.
-> - **RFC (Request for Comments)**: 기능 제안/정책 변경을 문서로 논의하는 프로세스.
-> - **OnPush Change Detection**: Angular에서 불필요한 렌더링을 줄이기 위한 변경 감지 전략.
-> - **flat config (ESLint)**: ESLint의 새로운 단일 계층 설정 방식.
-> - **breaking change**: 기존 코드와 호환되지 않아 수정이 필요한 변경.
+> - **Bun**: 빠른 JS/TS 런타임 및 번들링 도구.
