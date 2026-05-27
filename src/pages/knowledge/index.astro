@@ -1,0 +1,41 @@
+---
+import Breadcrumbs from '@/components/Breadcrumbs.astro'
+import KnowledgeCard from '@/components/KnowledgeCard.astro'
+import PageHead from '@/components/PageHead.astro'
+import Layout from '@/layouts/Layout.astro'
+import { getAllKnowledge, groupKnowledgeByCategory } from '@/lib/data-utils'
+
+const allKnowledge = await getAllKnowledge()
+const knowledgeByCategory = groupKnowledgeByCategory(allKnowledge)
+const categories = Object.keys(knowledgeByCategory).sort((a, b) =>
+  a.localeCompare(b),
+)
+---
+
+<Layout>
+  <PageHead slot="head" title="Knowledge" />
+  <Breadcrumbs
+    items={[{ label: 'Knowledge', href: '/knowledge', icon: 'lucide:library' }]}
+  />
+
+  <div class="flex min-h-[calc(100vh-18rem)] flex-col gap-y-8">
+    {
+      categories.length === 0 ? (
+        <p class="text-muted-foreground text-sm">아직 정리된 지식이 없습니다.</p>
+      ) : (
+        categories.map((category) => (
+          <section class="flex flex-col gap-y-4">
+            <div class="font-medium">{category}</div>
+            <ul class="flex flex-col gap-4">
+              {knowledgeByCategory[category].map((entry) => (
+                <li>
+                  <KnowledgeCard entry={entry} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))
+      )
+    }
+  </div>
+</Layout>
