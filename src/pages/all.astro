@@ -1,0 +1,40 @@
+---
+import BlogCard from '@/components/BlogCard.astro'
+import Breadcrumbs from '@/components/Breadcrumbs.astro'
+import KnowledgeCard from '@/components/KnowledgeCard.astro'
+import PageHead from '@/components/PageHead.astro'
+import Layout from '@/layouts/Layout.astro'
+import { getAllContent, groupContentByYear } from '@/lib/data-utils'
+
+const entries = await getAllContent()
+const entriesByYear = groupContentByYear(entries)
+const years = Object.keys(entriesByYear).sort((a, b) => parseInt(b) - parseInt(a))
+---
+
+<Layout>
+  <PageHead slot="head" title="All" />
+  <Breadcrumbs
+    items={[{ label: 'All', href: '/all', icon: 'lucide:archive' }]}
+  />
+
+  <div class="flex min-h-[calc(100vh-18rem)] flex-col gap-y-8">
+    {
+      years.map((year) => (
+        <section class="flex flex-col gap-y-4">
+          <div class="font-medium">{year}</div>
+          <ul class="flex flex-col gap-4">
+            {entriesByYear[year].map((entry) => (
+              <li>
+                {entry.collection === 'blog' ? (
+                  <BlogCard entry={entry} />
+                ) : (
+                  <KnowledgeCard entry={entry} />
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</Layout>
