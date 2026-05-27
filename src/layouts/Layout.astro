@@ -58,8 +58,10 @@ const { isWide = false } = Astro.props
             const n = counts[slug]
             if (typeof n !== 'number') continue
             const countEl = el.querySelector('[data-views-count]')
-            if (countEl) countEl.textContent = formatViews(n)
-            el.style.display = 'inline-flex'
+            if (countEl) {
+              countEl.textContent = formatViews(n)
+              el.style.display = 'inline-flex'
+            }
           }
         } catch {
           // 실패 시 placeholder 숨김 유지
