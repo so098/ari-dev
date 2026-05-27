@@ -45,7 +45,7 @@ const knowledge = await getAllKnowledge()
           자동으로 수집해 정리합니다. 직접 정리한 글도 함께 포함됩니다.
         </p>
         <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {knowledge.map((entry) => (
+          {knowledge.slice(0, 3).map((entry) => (
             <li class="h-full">
               <KnowledgeTile entry={entry} />
             </li>
