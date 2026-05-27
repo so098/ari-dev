@@ -13,8 +13,8 @@ Anthropic의 글 **A New Initiative For Developing Third Party Model Evaluations
 즉 “새 기술 출시” 공지라기보다, 그 기술이 현업 프로세스에서 어떤 변화를 만들었는지 설명하는 사례형 글로 읽는 편이 정확하다.
 
 ## 2) 원문 내용을 한국어로 풀어쓴 설명
-원문 본문 공개 텍스트에서 추출한 핵심 문맥은 다음과 같다.
-- Announcements A new initiative for developing third-party model evaluations Jul 1, 2024 A robust, third-party evaluation ecosystem is essential for assessing AI capabilities and risks, but the current evaluations landscape is limited. Developing high-quality, safety-relevant evaluations remains challenging, and the demand is outpacing the supply. To address this, today we're introducing a new initiative to fund evaluations developed by third-party organizations that can effectively measure advanced capabilities in AI models. Our investment in these evaluations is intended to elevate the entire field of AI safety, providing valuable tools that benefit the whole ecosystem. In this post, we des
+원문 본문 공개 텍스트를 바탕으로 핵심 흐름을 한국어로 정리하면 다음과 같다.
+이 글은 고도화된 AI 모델을 평가하는 외부 생태계가 왜 필요한지를 중심으로 전개된다. 특히 안전성과 신뢰성을 검증할 수 있는 제3자 평가의 공급이 수요를 따라가지 못하는 문제를 짚고, 이를 보완하기 위한 지원 이니셔티브의 배경과 목적을 설명한다.
 
 > [!NOTE] 공개 텍스트 기반 짧은 인용
 > "Announcements A new initiative for developing third-party model evaluations Jul 1, 2024 A robust, third-party evaluatio…"
