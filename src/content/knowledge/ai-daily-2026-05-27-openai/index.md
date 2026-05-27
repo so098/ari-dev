@@ -1,6 +1,6 @@
 ---
 title: "An OpenAI model has disproved a central conje…"
-description: "OpenAI 원문 1개를 한국어로 풀어쓴 브리핑"
+description: "OpenAI 모델이 80년 난제를 반례로 깨며, AI가 수학 연구에서 실제 발견을 만들 수 있음을 보여준 사례."
 category: "ai-daily"
 updated: "2026-05-27"
 ---
