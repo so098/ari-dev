@@ -146,7 +146,7 @@ export default function ChatWidget() {
       {open && (
         <div
           className={cn(
-            'bg-background fixed bottom-20 z-50 flex max-h-[70vh] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border shadow-lg sm:w-96',
+            'bg-background fixed bottom-20 z-50 flex max-h-[70dvh] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border shadow-lg sm:w-96',
             ANCHOR_RIGHT,
           )}
           role="dialog"
@@ -207,7 +207,8 @@ export default function ChatWidget() {
               onKeyDown={onKeyDown}
               rows={1}
               placeholder="메시지를 입력하세요…"
-              className="bg-background placeholder:text-muted-foreground max-h-24 flex-1 resize-none rounded-md border px-3 py-2 text-sm focus:outline-none"
+              // 모바일은 16px(iOS 포커스 시 화면 강제 확대 방지), 데스크톱은 14px
+              className="bg-background placeholder:text-muted-foreground max-h-24 flex-1 resize-none rounded-md border px-3 py-2 text-base focus:outline-none sm:text-sm"
             />
             <button
               onClick={() => void send(input)}
