@@ -1,20 +1,20 @@
 ---
-title: "100K Context Windows"
+title: "3 5 Models And Computer Use"
 description: "Anthropic 최신 글 핵심 내용을 한국어로 요약"
 category: "AI"
 updated: "2026-05-28"
 ---
 
 ## 1) 원문이 말하는 핵심 변화
-Anthropic의 글 **100K Context Windows**는 이번 발표에서 실제로 바뀐 지점을 먼저 제시한다. 포인트는 기능 소개 자체보다, 기존 작업 흐름에서 어떤 시간/품질 병목이 줄었는지다.
+Anthropic의 글 **3 5 Models And Computer Use**는 이번 발표에서 실제로 바뀐 지점을 먼저 제시한다. 포인트는 기능 소개 자체보다, 기존 작업 흐름에서 어떤 시간/품질 병목이 줄었는지다.
 즉 “새 기술 출시” 공지라기보다, 그 기술이 현업 프로세스에서 어떤 변화를 만들었는지 설명하는 사례형 글로 읽는 편이 정확하다.
 
 ## 2) 원문 내용을 한국어로 풀어쓴 설명
-원문 공개 요약 문장을 한국어로 옮기면 다음 의미다.
-- 원문 공개 요약이 충분치 않아, 제목과 제공된 메타정보를 기준으로 핵심 맥락을 정리했습니다.
+원문 본문 공개 텍스트에서 추출한 핵심 문맥은 다음과 같다.
+- Announcements Introducing computer use, a new Claude 3.5 Sonnet, and Claude 3.5 Haiku Oct 22, 2024 Update (12/03/2024): We have revised the pricing for Claude 3.5 Haiku. The model is now priced at $0.80 MTok input / $4 MTok output. Today, we’re announcing an upgraded Claude 3.5 Sonnet , and a new model, Claude 3.5 Haiku . The upgraded Claude 3.5 Sonnet delivers across-the-board improvements over its predecessor, with particularly significant gains in coding—an area where it already led the field. Claude 3.5 Haiku matches the performance of Claude 3 Opus, our prior largest model, on many evaluations at a similar speed to the previous generation of Haiku. We’re also introducing a groundbreakin
 
 > [!NOTE] 공개 텍스트 기반 짧은 인용
-> "원문 공개 요약이 충분치 않아, 제목과 제공된 메타정보를 기준으로 핵심 맥락을 정리했습니다."
+> "Announcements Introducing computer use, a new Claude 3.5 Sonnet, and Claude 3.5 Haiku Oct 22, 2024 Update (12/03/2024):…"
 이 문장을 맥락까지 포함해 풀면, 발표의 핵심은 “성능 수치 자랑”보다 “업무 단계에서 의사결정이 빨라지는 구조 변화”에 있다.
 그래서 읽을 때도 기능 이름보다, 실제로 어느 단계(탐색·검토·수정·배포)에서 대기 시간이 줄었는지를 중심으로 해석하는 것이 좋다.
 
@@ -28,4 +28,4 @@ Anthropic의 글 **100K Context Windows**는 이번 발표에서 실제로 바�
 또한 재배포 리스크를 줄이기 위해 인용은 소스별 최대 길이 정책(기본 120자) 안에서만 사용한다.
 원문 전체 맥락(세부 수치·조건·한계)은 원문 링크에서 반드시 교차 확인해야 한다.
 
-원문 링크: https://www.anthropic.com/news/100k-context-windows
+원문 링크: https://www.anthropic.com/news/3-5-models-and-computer-use
