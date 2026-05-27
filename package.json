@@ -23,6 +23,7 @@
     "@astrojs/vercel": "^9.0.5",
     "@expressive-code/plugin-collapsible-sections": "^0.40.2",
     "@expressive-code/plugin-line-numbers": "^0.40.2",
+    "@google/genai": "^2.6.0",
     "@iconify-json/lucide": "^1.2.26",
     "@tailwindcss/vite": "^4.0.7",
     "@types/react": "19.0.0",

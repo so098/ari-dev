@@ -1,0 +1,94 @@
+---
+import '@/styles/global.css'
+import { getRedis } from '@/lib/redis'
+
+export const prerender = false
+
+type ChatLog = { t: string; q: string; a: string }
+
+const adminToken = process.env.ADMIN_TOKEN ?? import.meta.env.ADMIN_TOKEN
+const key = Astro.url.searchParams.get('key') ?? ''
+const authorized = !!adminToken && key === adminToken
+
+let logs: ChatLog[] = []
+let redisMissing = false
+
+if (authorized) {
+  const redis = getRedis()
+  if (!redis) {
+    redisMissing = true
+  } else {
+    try {
+      // lpush로 객체 저장 → lrange가 객체 배열 반환 (Upstash 자동 역직렬화)
+      logs = await redis.lrange<ChatLog>('chat:log', 0, 199)
+    } catch {
+      logs = []
+    }
+  }
+}
+
+if (!authorized) {
+  Astro.response.status = 401
+}
+
+const fmt = (iso: string) => {
+  const d = new Date(iso)
+  return isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
+}
+---
+
+<!doctype html>
+<html lang="ko" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Chat Logs</title>
+  </head>
+  <body>
+    <main class="mx-auto max-w-3xl px-4 py-8">
+      {
+        !authorized ? (
+          <div>
+            <h1 class="mb-2 text-xl font-medium">접근 권한 없음</h1>
+            <p class="text-muted-foreground text-sm">
+              올바른 키가 필요합니다. <code>?key=...</code> 형식으로 접근하세요.
+            </p>
+          </div>
+        ) : redisMissing ? (
+          <p class="text-muted-foreground text-sm">
+            저장소(Redis)가 설정되지 않아 로그를 불러올 수 없습니다.
+          </p>
+        ) : (
+          <>
+            <div class="mb-6 flex items-baseline justify-between">
+              <h1 class="text-xl font-medium">채팅 질문 로그</h1>
+              <span class="text-muted-foreground text-sm">
+                최근 {logs.length}건 (최신순)
+              </span>
+            </div>
+            {logs.length === 0 ? (
+              <p class="text-muted-foreground text-sm">아직 기록이 없습니다.</p>
+            ) : (
+              <ul class="flex flex-col gap-4">
+                {logs.map((log) => (
+                  <li class="rounded-xl border p-4">
+                    <div class="text-muted-foreground mb-2 text-xs">
+                      {fmt(log.t)}
+                    </div>
+                    <p class="mb-2 text-sm font-medium">Q. {log.q}</p>
+                    <p class="text-muted-foreground text-sm whitespace-pre-wrap">
+                      A. {log.a}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )
+      }
+    </main>
+  </body>
+</html>

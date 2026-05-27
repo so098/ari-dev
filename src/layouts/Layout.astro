@@ -2,6 +2,7 @@
 import '@/styles/global.css'
 import '@/styles/typography.css'
 
+import ChatWidget from '@/components/ui/chat-widget'
 import Footer from '@/components/Footer.astro'
 import Head from '@/components/Head.astro'
 import Header from '@/components/Header.astro'
@@ -32,6 +33,7 @@ const { isWide = false } = Astro.props
       </main>
       <Footer />
     </div>
+    <ChatWidget client:idle transition:persist />
     <Analytics />
     <script>
       import { formatViews } from '@/lib/views-shared'
