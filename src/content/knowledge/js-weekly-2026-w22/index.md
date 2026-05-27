@@ -1,9 +1,8 @@
 ---
 title: "JavaScript Weekly 주간 압축 요약 (2026-W22)"
 description: "JavaScript Weekly 주요 소식을 한 주 단위로 압축 정리한 글"
-date: "2026-05-25"
-tags: ['javascript', 'weekly', 'frontend']
-image: '/static/1200x630.png'
+category: "javascript-weekly"
+updated: "2026-05-25"
 ---
 
 # JavaScript Weekly 주간 압축 요약 (2026-W22)
