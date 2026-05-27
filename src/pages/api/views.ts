@@ -12,18 +12,23 @@ export const GET: APIRoute = async ({ url }) => {
     .split(',')
     .map((s) => s.trim())
     .filter(isValidSlug)
+    .slice(0, 100)
 
   if (!redis || slugs.length === 0) {
     return Response.json({ counts: {} })
   }
 
   const keys = slugs.map(slugToKey)
-  const values = await redis.mget<(number | null)[]>(...keys)
-  const counts: Record<string, number> = {}
-  slugs.forEach((slug, i) => {
-    counts[slug] = Number(values[i] ?? 0)
-  })
-  return Response.json({ counts })
+  try {
+    const values = await redis.mget<(number | null)[]>(...keys)
+    const counts: Record<string, number> = {}
+    slugs.forEach((slug, i) => {
+      counts[slug] = Number(values[i] ?? 0)
+    })
+    return Response.json({ counts })
+  } catch {
+    return Response.json({ counts: {} })
+  }
 }
 
 // 조회수 +1: POST /api/views  body: { slug: "blog/a" }
@@ -44,6 +49,10 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ slug, count: null }, { status: 400 })
   }
 
-  const count = await redis.incr(slugToKey(slug))
-  return Response.json({ slug, count })
+  try {
+    const count = await redis.incr(slugToKey(slug))
+    return Response.json({ slug, count })
+  } catch {
+    return Response.json({ slug, count: null })
+  }
 }
