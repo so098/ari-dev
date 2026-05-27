@@ -13,7 +13,7 @@ updated: "2026-05-27"
 ### AdventHealth advances whole-person care with OpenAI
 - 이 글은 **OpenAI**의 최신 업데이트를 다룹니다.
 - 핵심 주제: **AdventHealth advances whole-person care with OpenAI**
-- 쉽게 말하면: AdventHealth is using ChatGPT for Healthcare to streamline workflows, reduce administrative burden, and return more time to patient care.
+- 쉽게 말하면: AdventHealth가 의료용 ChatGPT를 도입해 문서·행정 업무를 줄이고, 의료진이 환자 진료에 더 많은 시간을 쓰도록 만든 사례입니다.
 - 무엇이 중요한가: 우리 서비스/개발 프로세스에 바로 참고할 만한 패턴(모델 활용, 배포/운영 방식, 안전성 기준)을 제공합니다.
 
 ## 실무 적용 포인트
