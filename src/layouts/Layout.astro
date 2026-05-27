@@ -33,5 +33,63 @@ const { isWide = false } = Astro.props
       <Footer />
     </div>
     <Analytics />
+    <script>
+      import { formatViews } from '@/lib/views-shared'
+
+      async function fillCardViews() {
+        const els = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-views-slug]'),
+        )
+        const slugs = Array.from(
+          new Set(els.map((el) => el.dataset.viewsSlug).filter(Boolean)),
+        ) as string[]
+        if (slugs.length === 0) return
+
+        try {
+          const res = await fetch(
+            `/api/views?slugs=${encodeURIComponent(slugs.join(','))}`,
+          )
+          if (!res.ok) return
+          const { counts } = (await res.json()) as {
+            counts: Record<string, number>
+          }
+          for (const el of els) {
+            const slug = el.dataset.viewsSlug!
+            const n = counts[slug]
+            if (typeof n !== 'number') continue
+            const countEl = el.querySelector('[data-views-count]')
+            if (countEl) countEl.textContent = formatViews(n)
+            el.style.display = 'inline-flex'
+          }
+        } catch {
+          // 실패 시 placeholder 숨김 유지
+        }
+      }
+
+      async function incrementView() {
+        const marker = document.querySelector<HTMLElement>(
+          '[data-view-increment]',
+        )
+        const slug = marker?.dataset.viewIncrement
+        if (!slug) return
+        const key = `viewed:${slug}`
+        if (sessionStorage.getItem(key)) return
+        sessionStorage.setItem(key, '1')
+        try {
+          await fetch('/api/views', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug }),
+          })
+        } catch {
+          // 무시
+        }
+      }
+
+      document.addEventListener('astro:page-load', () => {
+        void incrementView()
+        void fillCardViews()
+      })
+    </script>
   </body>
 </html>
