@@ -1,13 +1,13 @@
 ---
 import BlogCard from '@/components/BlogCard.astro'
-import KnowledgeCard from '@/components/KnowledgeCard.astro'
+import KnowledgeTile from '@/components/KnowledgeTile.astro'
 import Link from '@/components/Link.astro'
 import PageHead from '@/components/PageHead.astro'
-import { buttonVariants } from '@/components/ui/button'
 import Layout from '@/layouts/Layout.astro'
-import { getAllContent } from '@/lib/data-utils'
+import { getAllKnowledge, getRecentPosts } from '@/lib/data-utils'
 
-const entries = (await getAllContent()).slice(0, 7)
+const posts = await getRecentPosts(7)
+const knowledge = await getAllKnowledge()
 ---
 
 <Layout>
@@ -18,37 +18,63 @@ const entries = (await getAllContent()).slice(0, 7)
         <p class="text-muted-foreground mb-2 text-sm">
           프론트엔드 개발자 ari의 기술 기록 공간입니다.
         </p>
-          <p class="text-muted-foreground mb-2 text-sm">
-            디자인 및 퍼블리싱을 거쳐 프론트엔드 개발자가 되었습니다. 실무에서 겪은 문제와 개선 과정을 기록합니다.
+        <p class="text-muted-foreground mb-2 text-sm">
+          디자인 및 퍼블리싱을 거쳐 프론트엔드 개발자가 되었습니다. 실무에서
+          겪은 문제와 개선 과정을 기록합니다.
         </p>
       </div>
     </div>
   </section>
+  {
+    knowledge.length > 0 && (
+      <section class="flex flex-col gap-y-4">
+        <div class="flex items-center justify-between gap-4">
+          <h2 class="text-2xl font-medium">Knowledge</h2>
+          <Link
+            href="/knowledge"
+            class="text-muted-foreground hover:text-foreground group flex shrink-0 items-center text-sm transition-colors"
+          >
+            See more
+            <span class="ml-1 transition-transform group-hover:translate-x-1">
+              &rsaquo;
+            </span>
+          </Link>
+        </div>
+        <p class="text-muted-foreground text-sm">
+          JavaScript Weekly와 안드레이 카파시, OpenAI, Anthropic 등의 글을
+          자동으로 수집해 정리합니다. 직접 정리한 글도 함께 포함됩니다.
+        </p>
+        <ul class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {knowledge.map((entry) => (
+            <li class="h-full">
+              <KnowledgeTile entry={entry} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
   <section class="flex flex-col gap-y-4">
-    <h2 class="text-2xl font-medium">Latest posts</h2>
+    <div class="flex items-center justify-between gap-4">
+      <h2 class="text-2xl font-medium">Blog posts</h2>
+      <Link
+        href="/blog"
+        class="text-muted-foreground hover:text-foreground group flex shrink-0 items-center text-sm transition-colors"
+      >
+        See more
+        <span class="ml-1 transition-transform group-hover:translate-x-1">
+          &rsaquo;
+        </span>
+      </Link>
+    </div>
     <ul class="flex flex-col gap-y-4">
       {
-        entries.map((entry) => (
+        posts.map((post) => (
           <li>
-            {entry.collection === 'blog' ? (
-              <BlogCard entry={entry} />
-            ) : (
-              <KnowledgeCard entry={entry} />
-            )}
+            <BlogCard entry={post} />
           </li>
         ))
       }
     </ul>
-    <div class="flex justify-center">
-      <Link
-        href="/all"
-        class={buttonVariants({ variant: 'ghost' }) + ' group'}
-      >
-        See all posts <span
-          class="ml-1.5 transition-transform group-hover:translate-x-1"
-          >&rarr;</span
-        >
-      </Link>
-    </div>
   </section>
 </Layout>

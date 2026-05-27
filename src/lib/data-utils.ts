@@ -103,37 +103,6 @@ export async function getAdjacentKnowledge(currentId: string): Promise<{
   }
 }
 
-export type ContentEntry =
-  | CollectionEntry<'blog'>
-  | CollectionEntry<'knowledge'>
-
-export function getContentDate(entry: ContentEntry): Date {
-  return entry.collection === 'blog' ? entry.data.date : entry.data.updated
-}
-
-export async function getAllContent(): Promise<ContentEntry[]> {
-  const [posts, knowledge] = await Promise.all([
-    getAllPosts(),
-    getAllKnowledge(),
-  ])
-  return [...posts, ...knowledge].sort(
-    (a, b) => getContentDate(b).valueOf() - getContentDate(a).valueOf(),
-  )
-}
-
-export function groupContentByYear(
-  entries: ContentEntry[],
-): Record<string, ContentEntry[]> {
-  return entries.reduce(
-    (acc: Record<string, ContentEntry[]>, entry) => {
-      const year = getContentDate(entry).getFullYear().toString()
-      ;(acc[year] ??= []).push(entry)
-      return acc
-    },
-    {},
-  )
-}
-
 export function groupKnowledgeByCategory(
   entries: CollectionEntry<'knowledge'>[],
 ): Record<string, CollectionEntry<'knowledge'>[]> {
