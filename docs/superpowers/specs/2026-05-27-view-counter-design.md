@@ -35,8 +35,9 @@
 - SDK: `@upstash/redis`
 - 키 스킴: `views:{collection}:{id}` (정수)
   - 예: `views:blog:auth-architecture-retrospective`, `views:knowledge:harness-design-for-long-running-agents`
-- 연결: Upstash REST URL/토큰 환경변수. Vercel Marketplace의 Upstash 연동으로 프로덕션에 자동 주입.
-  - 로컬 개발은 `.env`에 같은 값을 넣어야 동작. 없으면 엔드포인트는 graceful하게 빈 결과 반환.
+- 연결: 환경변수 **`KV_REST_API_URL`**, **`KV_REST_API_TOKEN`** (Vercel KV 스타일 이름으로 주입됨). `Redis.fromEnv()`는 `UPSTASH_*` 이름을 찾으므로 사용 불가 → `new Redis({ url, token })`로 명시 생성.
+  - 프로덕션: Vercel Marketplace Upstash 연동으로 자동 주입.
+  - 로컬: `.env`에 동일 값 등록(완료). 없으면 엔드포인트는 graceful하게 빈 결과 반환.
 
 ### API 엔드포인트 (Astro on-demand, `prerender = false`)
 
