@@ -2,6 +2,7 @@
 import { formatDate } from '@/lib/utils'
 import type { CollectionEntry } from 'astro:content'
 import Link from './Link.astro'
+import ViewCount from './ViewCount.astro'
 
 interface Props {
   entry: CollectionEntry<'knowledge'>
@@ -20,8 +21,11 @@ const formattedDate = formatDate(entry.data.updated)
   >
     <h3 class="text-lg font-medium">{entry.data.title}</h3>
     <p class="text-muted-foreground text-sm">{entry.data.description}</p>
-    <div class="text-muted-foreground mt-1 text-xs">
-      갱신일 {formattedDate}
+    <div
+      class="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 text-xs"
+    >
+      <span>갱신일 {formattedDate}</span>
+      <ViewCount slug={`${entry.collection}/${entry.id}`} />
     </div>
   </Link>
 </div>

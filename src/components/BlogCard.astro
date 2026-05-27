@@ -6,6 +6,7 @@ import { Icon } from 'astro-icon/components'
 import { Image } from 'astro:assets'
 import type { CollectionEntry } from 'astro:content'
 import Link from './Link.astro'
+import ViewCount from './ViewCount.astro'
 
 interface Props {
   entry: CollectionEntry<'blog'>
@@ -58,6 +59,7 @@ const readTime = readingTime(entry.body!)
         <span>{formattedDate}</span>
         <Separator orientation="vertical" className="h-4!" />
         <span>{readTime}</span>
+        <ViewCount slug={`${entry.collection}/${entry.id}`} />
       </div>
 
       {
