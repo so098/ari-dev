@@ -75,9 +75,10 @@ const { isWide = false } = Astro.props
         )
         const slug = marker?.dataset.viewIncrement
         if (!slug) return
+        // localStorage 기준: 같은 브라우저에서는 탭/세션 무관하게 1회만 카운트
         const key = `viewed:${slug}`
-        if (sessionStorage.getItem(key)) return
-        sessionStorage.setItem(key, '1')
+        if (localStorage.getItem(key)) return
+        localStorage.setItem(key, '1')
         try {
           await fetch('/api/views', {
             method: 'POST',
