@@ -6,9 +6,7 @@ updated: "2026-05-27"
 ---
 
 ## TL;DR (30초 요약)
-- 오늘 새 글 3건을 요약했습니다.
-- 출처: openai
-- 액션: 영향 큰 글부터 2개만 먼저 읽고 팀 공유하세요.
+- 오늘은 새로 감지된 게시글이 없습니다.
 
 ## 중요도 맵
 - 🔴 즉시 확인: 모델/API 변경, 보안/정책 영향, breaking 변경
@@ -16,18 +14,7 @@ updated: "2026-05-27"
 - 🟢 참고: 에세이, 관점 정리, 배경 지식
 
 ## 링크별 한줄 요약
-1. **[OPENAI] OpenAI, Grupo Folha and Grupo UOL announce strategic content partnership**
-   - 링크: https://openai.com/index/grupo-folha-grupo-uol-partnership
-   - 요약: OpenAI의 최신 연구/제품 업데이트로, API·모델 활용 전략 점검에 유용합니다. OpenAI partners with Grupo Folha and Grupo UOL to bring trusted Brazilian journalism to ChatGPT, expanding access to news with attribution and transparency.
-   - 분류: 🟡 / 도메인 openai.com
-2. **[OPENAI] OpenAI named a Leader in enterprise coding agents by Gartner**
-   - 링크: https://openai.com/index/gartner-2026-agentic-coding-leader
-   - 요약: OpenAI의 최신 연구/제품 업데이트로, API·모델 활용 전략 점검에 유용합니다. OpenAI is named a leader in the 2026 Gartner Magic Quadrant for Enterprise AI Coding Agents, with Codex recognized for innovation and enterprise-scale deployment.
-   - 분류: 🟡 / 도메인 openai.com
-3. **[OPENAI] How Virgin Atlantic ships faster with Codex**
-   - 링크: https://openai.com/index/virgin-atlantic
-   - 요약: OpenAI의 최신 연구/제품 업데이트로, API·모델 활용 전략 점검에 유용합니다. How Virgin Atlantic used Codex to ship its revamped mobile app on a fixed holiday travel deadline, reaching near-total unit test coverage and zero P1 defects.
-   - 분류: 🟡 / 도메인 openai.com
+- 업데이트 없음
 
 ## 실무 액션 체크리스트
 - [ ] 우리 스택에 직접 영향 있는 항목 1~2개 표시
