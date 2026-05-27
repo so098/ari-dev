@@ -19,12 +19,14 @@
     "@astrojs/react": "^4.2.5",
     "@astrojs/rss": "^4.0.11",
     "@astrojs/sitemap": "^3.3.1",
+    "@astrojs/vercel": "^9.0.5",
     "@expressive-code/plugin-collapsible-sections": "^0.40.2",
     "@expressive-code/plugin-line-numbers": "^0.40.2",
     "@iconify-json/lucide": "^1.2.26",
     "@tailwindcss/vite": "^4.0.7",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
+    "@upstash/redis": "^1.38.0",
     "@vercel/analytics": "^2.0.1",
     "astro": "^5.7.5",
     "astro-expressive-code": "^0.40.2",
@@ -51,7 +53,8 @@
     "prettier": "^3.5.1",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-astro-organize-imports": "^0.4.11",
-    "prettier-plugin-tailwindcss": "^0.6.11"
+    "prettier-plugin-tailwindcss": "^0.6.11",
+    "vitest": "^4.1.7"
   },
   "prettier": {
     "semi": false,

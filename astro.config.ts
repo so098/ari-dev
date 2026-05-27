@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config'
 
+import vercel from '@astrojs/vercel'
 import mdx from '@astrojs/mdx'
 import react from '@astrojs/react'
 import sitemap from '@astrojs/sitemap'
@@ -21,6 +22,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   site: 'https://ari.io.kr',
+  adapter: vercel(),
   redirects: {
     '/blog/harness-design-for-long-running-agents':
       '/knowledge/harness-design-for-long-running-agents',
