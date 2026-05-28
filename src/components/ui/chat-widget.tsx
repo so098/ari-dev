@@ -10,7 +10,7 @@ const GREETING =
   '안녕하세요! ari의 기술 블로그 도우미예요. 인증·보안, 프론트엔드, 프로젝트 경험 등 궁금한 점을 물어보세요.'
 
 const CONTACT_GREETING =
-  'ari에게 직접 메시지를 보낼 수 있어요. 확인 후 여기서 답장드릴게요. (대화는 7일간 유지됩니다)'
+  'ari에게 직접 메시지를 보낼 수 있어요. 확인 후 여기서 답장드릴게요.'
 
 const SUGGESTIONS = [
   'ari는 어떤 개발자인가요?',
@@ -63,11 +63,12 @@ function uuid() {
 }
 
 function getVisitorId(): string {
+  // sessionStorage: 탭을 닫으면 visitorId가 사라져 다음 방문엔 새 대화로 시작
   try {
-    const existing = localStorage.getItem(VISITOR_KEY)
+    const existing = sessionStorage.getItem(VISITOR_KEY)
     if (existing && /^[a-f0-9-]{8,64}$/i.test(existing)) return existing
     const fresh = uuid()
-    localStorage.setItem(VISITOR_KEY, fresh)
+    sessionStorage.setItem(VISITOR_KEY, fresh)
     return fresh
   } catch {
     return uuid()

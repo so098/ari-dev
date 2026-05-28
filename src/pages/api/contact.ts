@@ -5,8 +5,10 @@ export const prerender = false
 
 const RATE_LIMIT_PER_HOUR = 10
 const MAX_MESSAGE_CHARS = 2000
-const VID_TTL_SECONDS = 60 * 60 * 24 * 7 // 7일
-const MSG_TTL_SECONDS = 60 * 60 * 24 * 7
+// 위젯이 sessionStorage로 visitorId를 관리하므로 탭을 닫으면 매핑은 더 이상 안 쓰임.
+// Redis 키 누적 방지용으로 24시간 후 자동 만료.
+const VID_TTL_SECONDS = 60 * 60 * 24
+const MSG_TTL_SECONDS = 60 * 60 * 24
 const MSG_LIST_MAX = 200
 
 function escapeHtml(s: string) {
@@ -92,12 +94,9 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (redis) {
     try {
       await redis.set(`contact:vid:${sid}`, visitorId, { ex: VID_TTL_SECONDS })
-      console.log('[contact] stored vid mapping', sid)
     } catch (e) {
       console.error('[contact] vid mapping store failed', e)
     }
-  } else {
-    console.warn('[contact] redis unavailable, skipping vid mapping')
   }
 
   const ua = request.headers.get('user-agent') ?? 'unknown'
@@ -134,16 +133,14 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
       const body = await res.text().catch(() => '')
       console.error('[contact] telegram sendMessage failed', res.status, body)
       return Response.json(
-        {
-          error: `텔레그램 전송 실패 (${res.status}): ${body.slice(0, 300)}`,
-        },
+        { error: '메시지 전송에 실패했어요. 잠시 후 다시 시도해 주세요.' },
         { status: 502 },
       )
     }
   } catch (e) {
     console.error('[contact] fetch threw', e)
     return Response.json(
-      { error: `네트워크 오류: ${(e as Error).message}` },
+      { error: '메시지 전송에 실패했어요. 잠시 후 다시 시도해 주세요.' },
       { status: 502 },
     )
   }

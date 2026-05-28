@@ -3,7 +3,7 @@ import type { APIRoute } from 'astro'
 
 export const prerender = false
 
-const MSG_TTL_SECONDS = 60 * 60 * 24 * 7
+const MSG_TTL_SECONDS = 60 * 60 * 24
 const MSG_LIST_MAX = 200
 
 type TgUpdate = {
@@ -41,25 +41,14 @@ export const POST: APIRoute = async ({ request }) => {
   const msg = update.message
   const replyText = msg?.text?.trim()
   const original = msg?.reply_to_message?.text ?? ''
-  console.log('[tg-webhook] update received', {
-    hasMessage: !!msg,
-    hasReplyText: !!replyText,
-    hasReplyTo: !!msg?.reply_to_message,
-    originalLen: original.length,
-    originalPreview: original.slice(0, 120),
-  })
   if (!replyText || !original) {
-    console.log('[tg-webhook] skip: not a reply')
+    // reply 형식이 아닌 일반 메시지는 무시
     return Response.json({ ok: true })
   }
 
   const m = /\[ID:([a-f0-9]{4,16})\]/i.exec(original)
-  if (!m) {
-    console.log('[tg-webhook] skip: no [ID:...] tag in original')
-    return Response.json({ ok: true })
-  }
+  if (!m) return Response.json({ ok: true })
   const sid = m[1].toLowerCase()
-  console.log('[tg-webhook] matched shortId', sid)
 
   let visitorId: string | null = null
   try {
@@ -69,10 +58,9 @@ export const POST: APIRoute = async ({ request }) => {
     return Response.json({ ok: false }, { status: 500 })
   }
   if (!visitorId) {
-    console.log('[tg-webhook] skip: visitorId mapping not found for sid', sid)
+    // 만료/없음
     return Response.json({ ok: true })
   }
-  console.log('[tg-webhook] found visitorId', visitorId.slice(0, 8) + '...')
 
   const key = `contact:msgs:${visitorId}`
   try {
@@ -83,7 +71,6 @@ export const POST: APIRoute = async ({ request }) => {
     })
     await redis.ltrim(key, -MSG_LIST_MAX, -1)
     await redis.expire(key, MSG_TTL_SECONDS)
-    console.log('[tg-webhook] pushed reply to', key)
   } catch (e) {
     console.error('[tg-webhook] redis.push failed', e)
     return Response.json({ ok: false }, { status: 500 })
