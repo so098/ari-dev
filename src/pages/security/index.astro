@@ -1,0 +1,144 @@
+---
+import Link from '@/components/Link.astro'
+import PageHead from '@/components/PageHead.astro'
+import Layout from '@/layouts/Layout.astro'
+import { getAllPosts } from '@/lib/data-utils'
+
+const SERIES = [
+  {
+    id: 'authentication-architecture',
+    step: '1단계 — 결정',
+    why: '“토큰을 어디에 보관할까” 결정에 1주일을 썼습니다. localStorage·서버 세션·HttpOnly 쿠키 하이브리드 세 가지를 같은 기준으로 비교해서, 왜 결국 하이브리드를 택했는지 정리했습니다.',
+  },
+  {
+    id: 'httponly-cookie-security-limits',
+    step: '2단계 — 한계 직시',
+    why: '하이브리드를 운영하다 “HttpOnly 쿠키면 안전하다”는 인식의 빈틈을 발견했습니다. XSS 활성 상태에서도 토큰이 오용되는 시나리오, SameSite Lax의 세 가지 구조적 허점을 코드 예시와 함께 설명합니다.',
+  },
+  {
+    id: 'auth-architecture-hard-parts',
+    step: '3단계 — 헷갈렸던 지점',
+    why: '1편·2편을 쓰면서 실제로 가장 시간이 많이 든 다섯 지점을 따로 모았습니다. 토큰 관리가 두 레이어로 나뉜 구조 정당화, CSRF “성립하지 않음” 논증의 어려움까지.',
+  },
+  {
+    id: 'auth-architecture-retrospective',
+    step: '4단계 — 회고',
+    why: '1년 4개월 운영 후 다시 한다면 바꿀 다섯 가지: 백엔드 Set-Cookie 회귀, CSP 1일차 도입, Refresh Token Rotation, 쿠키 Path/Prefix 보수화, 인증 활동 로깅.',
+  },
+]
+
+const EXTERNAL_REFERENCES = [
+  {
+    title: 'MDN — HTTP cookies',
+    href: 'https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies',
+    note: 'HttpOnly·SameSite·Secure·Path 옵션의 공식 정의',
+  },
+  {
+    title: 'OWASP — Cross-Site Request Forgery Prevention',
+    href: 'https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html',
+    note: 'CSRF 방어 패턴 (double-submit, SameSite, Origin 검증)',
+  },
+  {
+    title: 'RFC 6749 — OAuth 2.0 Authorization Framework',
+    href: 'https://datatracker.ietf.org/doc/html/rfc6749',
+    note: 'access·refresh 토큰 모델의 원전',
+  },
+  {
+    title: 'RFC 6819 — OAuth 2.0 Threat Model',
+    href: 'https://datatracker.ietf.org/doc/html/rfc6819',
+    note: 'Refresh Token Rotation을 비롯한 위협·완화 모델',
+  },
+]
+
+const allPosts = await getAllPosts()
+const seriesPosts = SERIES.map((item) => {
+  const post = allPosts.find((p) => p.id === item.id)
+  return post ? { ...item, post } : null
+}).filter((x) => x !== null)
+---
+
+<Layout>
+  <PageHead
+    slot="head"
+    title="Security 시리즈"
+    description="프론트엔드 인증·보안을 처음부터 끝까지 따라가도록 정리한 한국어 자료. HttpOnly 쿠키 하이브리드 인증, SameSite Lax 한계, Refresh Token Rotation, CSRF 방어까지 실제 서비스에 적용한 결정과 회고를 한 곳에 모았습니다."
+  />
+
+  <section class="border-b pb-6">
+    <p class="text-muted-foreground mb-2 text-sm">Security 시리즈</p>
+    <h1 class="mb-3 text-2xl font-medium sm:text-3xl">
+      한국어로 정리한<br class="hidden sm:block" /> 프론트엔드 인증·보안 자료
+    </h1>
+    <p class="text-muted-foreground text-sm">
+      HttpOnly 쿠키 하이브리드 인증을 실제 서비스에 1년 4개월 운영하며 얻은
+      결정과 회고를 4편으로 정리했습니다. 각 글을 어떤 순서로 읽어야 흐름이
+      이어지는지, 어떤 결정 지점이 가장 어려웠는지 본인 관점에서 큐레이션
+      했습니다.
+    </p>
+  </section>
+
+  <section class="flex flex-col gap-y-4">
+    <h2 class="text-2xl font-medium">읽는 순서</h2>
+    <ol class="flex flex-col gap-y-3">
+      {
+        seriesPosts.map((item) => (
+          <li class="rounded-xl border p-4">
+            <Link
+              href={`/blog/${item.post.id}`}
+              class="hover:text-foreground/80 block transition-colors"
+            >
+              <p class="text-foreground/60 text-xs">{item.step}</p>
+              <h3 class="mt-1 font-medium">{item.post.data.title}</h3>
+              <p class="text-muted-foreground mt-2 text-sm">{item.why}</p>
+            </Link>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="flex flex-col gap-y-4">
+    <h2 class="text-2xl font-medium">Live Demo</h2>
+    <div class="rounded-xl border border-dashed p-4">
+      <p class="text-foreground/80 mb-2 text-sm font-medium">
+        보안 강화 데모 로그인 + 공격 시도 패널
+      </p>
+      <p class="text-muted-foreground text-sm">
+        위 4편의 글에서 다룬 보안 설계가 실제로 어떻게 동작하는지 직접 만져보는
+        데모를 준비 중입니다. HttpOnly·SameSite·Refresh Rotation·CSRF·CSP·rate
+        limit이 적용된 가입/로그인 시스템과, 8가지 공격 시도(localStorage 토큰
+        탈취, document.cookie 읽기, CSRF, refresh token 재사용 등)를 직접 실행해
+        무엇이 차단되는지 눈으로 확인할 수 있는 패널을 함께 제공할 예정입니다.
+        곧 공개합니다.
+      </p>
+    </div>
+  </section>
+
+  <section class="flex flex-col gap-y-4">
+    <h2 class="text-2xl font-medium">관련 1차 출처</h2>
+    <ul class="flex flex-col gap-y-2">
+      {
+        EXTERNAL_REFERENCES.map((ref) => (
+          <li class="rounded-xl border p-4">
+            <Link
+              href={ref.href}
+              external
+              class="hover:text-foreground/80 block transition-colors"
+            >
+              <h3 class="font-medium">{ref.title}</h3>
+              <p class="text-muted-foreground mt-1 text-sm">{ref.note}</p>
+            </Link>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-y-4 border-t pt-6">
+    <h2 class="text-2xl font-medium">함께 일하고 싶다면</h2>
+    <p class="text-muted-foreground text-sm">
+      채용 관련해 이야기 나누고 싶다면 우측 하단 챗 위젯의 “사람에게” 탭으로
+      메시지를 보내거나 메일을 보내주시길 바랍니다.
+    </p>
+  </section>
+</Layout>
