@@ -92,9 +92,12 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (redis) {
     try {
       await redis.set(`contact:vid:${sid}`, visitorId, { ex: VID_TTL_SECONDS })
-    } catch {
-      // 무시
+      console.log('[contact] stored vid mapping', sid)
+    } catch (e) {
+      console.error('[contact] vid mapping store failed', e)
     }
+  } else {
+    console.warn('[contact] redis unavailable, skipping vid mapping')
   }
 
   const ua = request.headers.get('user-agent') ?? 'unknown'
