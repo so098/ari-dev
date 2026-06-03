@@ -1,0 +1,23 @@
+---
+const naverAnalyticsId =
+  import.meta.env.PUBLIC_NAVER_ANALYTICS_ID ?? 'cfefa2be4243d0'
+---
+
+{
+  naverAnalyticsId && (
+    <script is:inline src="https://wcs.pstatic.net/wcslog.js" />
+  )
+}
+
+<script is:inline define:vars={{ naverAnalyticsId }}>
+  if (naverAnalyticsId) {
+    window.wcs_add = window.wcs_add || {}
+    window.wcs_add.wa = naverAnalyticsId
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    if (naverAnalyticsId && window.wcs) {
+      window.wcs_do()
+    }
+  })
+</script>
