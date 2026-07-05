@@ -1,40 +1,42 @@
 ---
 title: "JavaScript Weekly 주간 압축 요약 (2026-W06)"
-description: "JavaScript Weekly 주요 소식을 한 주 단위로 압축 정리한 글"
+description: "이번 주 JavaScript 생태계 핵심 이슈를 링크별로 한국어로 정리했습니다."
 category: "javascript-weekly"
 updated: "2026-02-02"
 ---
 
-## 핵심 요약
+## 요약 대상
 
-이번 JavaScript Weekly #790의 중심 흐름은 **타입 안정성, 패키지 설치 보안, AI 시대의 개발 생산성, 그리고 주요 JS 도구들의 베타/릴리스 소식**입니다. React/Next/Vercel/Overreacted 전용 링크는 대상 규칙에 따라 제외했습니다.
+이번 주 수집된 JavaScript Weekly #792 기준으로, 품질게이트(`accessible=true`, `extract_len>=1200`, `extract_text` 존재)를 통과한 JavaScript 런타임/툴링 관련 링크는 1개입니다. React/Next 전용 링크와 별도 외부 블로그 링크는 제외했습니다.
 
 ## 링크별 정리
 
-### 1. [JavaScript Weekly Issue 790: June 16, 2026](https://javascriptweekly.com/issues/790)
+### 1. Deno 2.9
 
-JavaScript Weekly #790은 Flow와 TypeScript 비교, npm 설치 스크립트 정책 변화, AI 코딩 도구 활용, JS 성능 컴파일러 및 주요 프레임워크 릴리스 흐름을 폭넓게 다룹니다.
+- 링크: https://javascriptweekly.com/link/187214/rss
+- 분류: JavaScript/TypeScript 런타임, 데스크톱 앱, Node 호환성, 테스트/빌드 도구
 
-- **Flow vs TypeScript**: Meta의 Flow가 TypeScript와 문법적으로 더 가까워졌지만, 더 엄격한 기본값과 `match` 같은 자체 기능을 통해 안정성을 강조한다는 점이 소개됐습니다.
-- **npm v12 보안 변화**: 향후 npm v12는 `preinstall`, `install`, `postinstall` 스크립트를 기본 실행하지 않는 방향으로 바뀔 예정입니다. 공급망 공격 방어 관점에서 중요한 변화이며, npm 11.16.0부터는 v12에서 차단될 동작을 경고로 확인할 수 있습니다.
-- **AI 코딩 시대의 역설**: htmx 제작자의 글을 통해 “코드는 더 싸졌지만 이해는 여전히 비싸다”는 관점이 소개됐습니다. 생성형 AI로 코드 생산 비용은 낮아져도 복잡성 관리는 여전히 핵심 과제로 남는다는 메시지입니다.
-- **도구 생태계 소식**: pnpm 팀의 GitHub Action, Closure 스타일 최적화를 시도하는 실험적 JavaScript 성능 컴파일러 Compilecat, SvelteKit 3.0 / Vue 3.6 / Vite 8.1 / Astro 7.0 등 주요 프로젝트의 베타·프리릴리스 진행 상황이 언급됐습니다.
-- **릴리스**: Playwright 1.61은 패스키 등록·테스트와 WebStorage API를 통한 localStorage/sessionStorage 읽기·쓰기를 지원합니다. ESLint 10.5.0은 일부 core rule의 에디터 표시 범위를 더 정밀하게 줄였습니다. TanStack AI Beta도 소개됐습니다.
+Deno 2.9는 `deno desktop`을 중심으로 한 큰 업데이트입니다. 웹 기술 기반 프로젝트나 스크립트를 네이티브 데스크톱 애플리케이션으로 패키징할 수 있게 하며, UI는 웹뷰에서 실행되고 로직은 Deno 런타임에서 동작합니다. Electron이나 Tauri 같은 별도 도구 체인 없이 단일 배포 바이너리를 만드는 방향을 제시한다는 점이 핵심입니다.
 
-### 2. [Flow: A Typed Dialect of JavaScript](https://javascriptweekly.com/link/186568/rss)
+기존 Node 계열 프로젝트의 Deno 전환도 쉬워졌습니다. `deno install`이 npm, pnpm, yarn, Bun lockfile을 직접 읽을 수 있어 패키지 매니저를 Deno로 바꾸는 과정이 단순해졌습니다. JavaScript/TypeScript 프로젝트에서 Deno를 실험하거나 점진 도입하려는 팀에게 진입 장벽을 낮추는 변화입니다.
 
-Flow는 이제 TypeScript 사용자에게 익숙한 문법을 대거 지원하면서도, React 중심 기능과 더 엄격한 타입 안정성을 차별점으로 내세웁니다.
-
-- **TypeScript와 유사한 문법**: `keyof`, `readonly`, `unknown`, indexed access type `T[K]`, generic `extends` bound, conditional type, mapped type, type guard 등 TypeScript 사용자에게 익숙한 기능을 지원합니다.
-- **React 우선 설계**: Flow는 `component`와 `renders`를 일급 문법으로 제공해 React 컴포넌트의 props와 렌더링 관계를 타입 시스템 안에서 더 직접적으로 표현합니다.
-- **`renders` 기반 합성 제약**: 특정 컴포넌트만 렌더링할 수 있도록 타입으로 제한할 수 있어, 디자인 시스템의 합성 규칙을 코드 리뷰가 아니라 타입 오류로 강제할 수 있습니다.
-- **패턴 매칭**: `match`를 통해 표현식 기반 패턴 매칭을 제공하며, exhaustive check를 통해 처리하지 않은 케이스를 줄이는 방향을 제시합니다.
-- **핵심 의미**: Flow는 단순히 TypeScript 대체재라기보다, JavaScript/React 코드베이스에서 더 강한 기본 안전성과 프레임워크 친화적 타입 표현을 실험하는 선택지로 보입니다.
+또한 CSS module import, 테스트 러너 개선, `deno compile --bundle` 결과물 크기 축소, 더 빠른 콜드 스타트, Node.js 26 호환성 목표 등이 포함되어 있습니다. 전반적으로 Deno 2.9는 “런타임”을 넘어 앱 패키징, 테스트, 빌드, Node 생태계 호환까지 개발 워크플로 전반을 넓히는 릴리스로 볼 수 있습니다.
 
 ## 요약 불가/검증 필요 링크
 
-- [https://javascriptweekly.com/link/186567/rss](https://javascriptweekly.com/link/186567/rss) — 접근 불가로 본문을 확인할 수 없습니다. `accessible=false`, `extract_len=0`, `extract_text=null` 상태입니다.
+아래 링크들은 JavaScript Weekly 맥락의 링크이지만 품질게이트를 통과하지 못해 본문 요약에서 제외했습니다.
+
+| 링크 | 사유 |
+|---|---|
+| https://javascriptweekly.com/issues/792 | 접근은 가능하지만 본문 추출 길이가 부족함 (`extract_len=0`) |
+| https://javascriptweekly.com/link/187272/rss | 접근은 가능하지만 본문 추출 길이가 부족함 (`extract_len=0`) |
+| https://javascriptweekly.com/link/187213/rss | 접근은 가능하지만 본문 추출 길이가 부족함 (`extract_len=0`) |
 
 ## 제외한 링크
 
-대상 선택 규칙에 따라 React/Next/Vercel/Overreacted 전용 링크는 이번 요약에서 제외했습니다.
+React/Next 전용 링크 또는 외부 개인/제품 블로그 성격의 링크는 요청된 대상 선택 규칙에 따라 제외했습니다.
+
+- react.dev 링크
+- nextjs.org 링크
+- vercel.com 링크
+- overreacted.io 링크
