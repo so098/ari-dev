@@ -1,6 +1,6 @@
 ---
 title: "JavaScript Weekly 주간 압축 요약 (2026-W34)"
-description: "JavaScript Weekly 주요 소식을 한 주 단위로 압축 정리한 글"
+description: "이번 주 JavaScript 생태계 핵심 이슈를 링크별로 한국어로 정리했습니다."
 category: "javascript-weekly"
 updated: "2026-08-17"
 ---
