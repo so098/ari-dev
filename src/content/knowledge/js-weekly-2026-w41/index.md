@@ -1,78 +1,43 @@
 ---
 title: "JavaScript Weekly 주간 압축 요약 (2026-W41)"
-description: "JavaScript Weekly 주요 소식을 한 주 단위로 압축 정리한 글"
+description: "이번 주 JavaScript 생태계 핵심 이슈를 링크별로 한국어로 정리했습니다."
 category: "javascript-weekly"
 updated: "2026-10-05"
 ---
 
-# JavaScript Weekly 2026-W41
+## 핵심 요약
 
-> 기준: 2026-09-29 수집분 / 원문: [A-ha의 Take on Me를 순수 JavaScript로 재현](https://javascriptweekly.com/issues/804)
+이번 JavaScript Weekly #805에서 본문 추출 품질 기준을 통과한 JavaScript Weekly 맥락 링크는 1개입니다. 핵심 주제는 브라우저가 이미 제공하는 표준 기능을 두고도 개발자들이 왜 라이브러리·프레임워크·직접 구현에 의존하는지에 대한 분석입니다.
 
-## TL;DR
+## 링크별 정리
 
-- 이번 주 최우선 액션은 **Next.js 9월 보안 릴리스 적용**입니다. `16.3.8` 및 `15.5.27`에서 Image Optimization SSRF와 SSG/ISR cache poisoning 등 취약점 수정이 제공됩니다.
-- **React 19.3**은 View Transitions와 Fragment Refs를 stable로 올렸고, Trusted Types 및 Server Components 관련 개선도 포함해 프론트엔드 업그레이드 검토 가치가 큽니다.
-- JavaScript Weekly 본문에서 가장 실무적인 성능 사례는 **claude.ai 3배 개선 스프린트**입니다. 자동 벤치마크, 작은 회귀 탐지, 예상 밖 병목을 찾는 방식이 참고할 만합니다.
-- AI/agent 흐름은 Jev 같은 빠른 의사결정 모델, agent-written code 배포, 테스트 자동생성까지 이어지며 “속도는 높이되 검증 가드레일을 촘촘히”가 공통 메시지입니다.
+### 1. Why don’t more developers “use the platform”?
 
-## 중요도 맵(🔴🟡🟢)
+- 링크: https://javascriptweekly.com/link/191125/rss
+- 출처/작성자: Read the Tea Leaves / Nolan Lawson
+- 분류: 웹 플랫폼, 브라우저 표준, 프론트엔드 개발 문화
 
-| 중요도 | 링크 | 한줄 판단 |
-|---|---|---|
-| 🔴 | [Next.js September 2026 Security Release](https://nextjs.org/blog/september-2026-security-release) | Image Optimization SSRF(high)와 self-hosted SSG/ISR cache poisoning(medium) 수정이 포함되어 Next.js 서비스는 즉시 버전 확인이 필요합니다. |
-| 🔴 | [React 19.3](https://react.dev/blog/2026/09/09/react-19-3) | View Transitions와 Fragment Refs가 stable이 되어 UI 전환·focus/측정 패턴을 공식 API로 설계할 수 있습니다. |
-| 🔴 | [claude.ai 3배 성능 개선 사례](https://javascriptweekly.com/link/190938/rss) | p75 time-to-typeable을 3.1초에서 0.55초로 낮춘 사례로, 프론트엔드 성능 스프린트 운영법을 바로 차용할 수 있습니다. |
-| 🟡 | [Upcoming Next.js September Security Release](https://nextjs.org/blog/upcoming-nextjs-security-release-september-2026) | 보안 릴리스 사전 공지와 변경 이력을 통해 프레임워크 패치 윈도우를 미리 잡는 운영 패턴을 보여줍니다. |
-| 🟡 | [Meticulous AI frontend testing](https://javascriptweekly.com/link/190937/rss) | 사용 흐름 기반 시각/브라우저 테스트를 자동 생성·유지하는 접근으로 회귀 테스트 커버리지 확장 후보입니다. |
-| 🟡 | [Jev for Python engineers](https://vercel.com/blog/jev-for-python-engineers) | 좁은 범주의 다지선다 판단을 빠르게 수행하는 모델과 `evaluate()` API는 분류·라우팅 자동화 실험에 적합합니다. |
-| 🟡 | [Rogo의 agent-written code 배포](https://vercel.com/blog/how-rogo-ships-agent-written-code-to-production-in-5-minutes-on-vercel) | agent가 작성한 코드를 5분 내 배포하고 사고 대응까지 자동화한 사례로, 배포 가드레일 설계에 참고할 수 있습니다. |
-| 🟢 | [A-ha Take on Me 순수 JS 재현](https://javascriptweekly.com/issues/804) | Canvas/Web Audio/이미지 처리 등 브라우저 API를 창의적으로 활용한 데모로 팀 학습·기술 공유 소재입니다. |
-| 🟢 | [React Foundation 공식 출범](https://react.dev/blog/2026/02/24/the-react-foundation) | React/React Native/JSX가 Linux Foundation 산하 재단으로 이관되어 생태계 거버넌스 독립성이 강화됐습니다. |
-| 🟢 | [atproto 구조 설명](https://overreacted.io/there-are-no-instances-in-atproto/) | 분산 소셜에서 hosting과 aggregation이 분리되는 모델을 이해하는 배경 지식으로 유용합니다. |
+브라우저 표준 기능을 적극 활용하자는 “use the platform” 주장이 왜 여전히 많은 개발자에게 설득력을 충분히 얻지 못하는지 짚는 글입니다. 글은 단순히 개발자들이 표준을 모른다거나 게으르다는 식으로 보지 않고, 역사적·생태계적 이유를 함께 설명합니다.
 
-## 링크별 한줄 요약 TOP 8-10
+주요 원인은 과거 브라우저 호환성 문제입니다. 오랫동안 브라우저는 개발자 생태계보다 뒤처져 있었고, jQuery 같은 라이브러리는 실제로 필요한 공백을 메웠습니다. 표준 API가 생기더라도 오래된 브라우저 지원 문제 때문에 바로 사용할 수 없었고, 그 결과 직접 구현하거나 라이브러리를 쓰는 선택이 합리적인 경우가 많았습니다.
 
-1. **Next.js September 2026 Security Release** — `next@16.3.8`/`15.5.27`로 Image Optimization SSRF와 SSG/ISR cache poisoning 등 보안 이슈를 패치해야 합니다.  
-   링크: https://nextjs.org/blog/september-2026-security-release
-2. **React 19.3** — `<ViewTransition>`과 Fragment Ref가 stable이 되어 전환 애니메이션과 wrapper 없는 DOM 그룹 제어를 프로덕션에서 검토할 수 있습니다.  
-   링크: https://react.dev/blog/2026/09/09/react-19-3
-3. **How we made claude.ai 3x faster in two weeks** — Claude가 만든 벤치마크와 촘촘한 변경 루프로 p75 입력 가능 시간을 3.1초에서 0.55초로 줄인 성능 스프린트 사례입니다.  
-   링크: https://javascriptweekly.com/link/190938/rss
-4. **Upcoming Next.js September Security Release** — 보안 패치를 공개 전 예고하고 팀이 업그레이드 일정을 확보하게 하는 프레임워크 보안 운영 사례입니다.  
-   링크: https://nextjs.org/blog/upcoming-nextjs-security-release-september-2026
-5. **Meticulous AI** — 프론트엔드 브라우저 테스트를 자동 생성·자동 유지해 수동 테스트로 놓치기 쉬운 시각 회귀를 잡는 도구입니다.  
-   링크: https://javascriptweekly.com/link/190937/rss
-6. **Jev for Python engineers** — 빠른 다지선다 판단에 특화된 모델을 Vercel AI SDK Python의 experimental `evaluate()` API로 실험하는 소개 글입니다.  
-   링크: https://vercel.com/blog/jev-for-python-engineers
-7. **Rogo ships agent-written code in 5 minutes** — 금융 AI 제품 팀이 agent-written code와 agent swarm을 배포·운영에 적용한 Vercel 고객 사례입니다.  
-   링크: https://vercel.com/blog/how-rogo-ships-agent-written-code-to-production-in-5-minutes-on-vercel
-8. **Issue #804: A-ha's Take on Me, recreated in pure JavaScript** — 음악·영상 스타일을 순수 JavaScript로 재현한 데모와 이번 호 주요 링크를 모은 원문입니다.  
-   링크: https://javascriptweekly.com/issues/804
-9. **The React Foundation** — React, React Native, JSX가 Meta 소유에서 React Foundation 소유로 이관되어 독립 거버넌스 구조가 마련됐습니다.  
-   링크: https://react.dev/blog/2026/02/24/the-react-foundation
-10. **There Are No Instances in atproto** — atproto는 Mastodon식 instance 모델이 아니라 계정/데이터/앱/릴레이가 분리되는 구조라는 점을 설명합니다.  
-   링크: https://overreacted.io/there-are-no-instances-in-atproto/
+또 다른 이유는 익숙함과 도구 생태계입니다. React 개발자라면 문제를 만났을 때 먼저 npm 패키지나 React 컴포넌트를 찾는 경향이 있습니다. 반면 CSS `position: sticky`처럼 플랫폼에 이미 있는 기능은 패키지 검색 흐름 안에서 잘 드러나지 않습니다. 라이브러리는 플랫폼 API를 더 친숙한 프레임워크 문법과 추상화로 감싸 제공하기 때문에, 개발자는 원시 DOM API보다 패키지화된 솔루션을 선호하게 됩니다.
 
-## 실무 액션 체크리스트
+문서화의 차이도 큽니다. 많은 npm 패키지는 README, 예제, 스크린샷, 튜토리얼이 잘 갖춰져 있는 반면, 브라우저 표준 기능은 개발자가 원하는 프레임워크 맥락에서 바로 이해하기 어렵거나 흩어져 있는 경우가 있습니다. 즉 “플랫폼을 쓰라”는 조언이 맞더라도, 실제 개발자의 탐색 경로와 학습 경험에서는 라이브러리가 더 접근성 높게 느껴질 수 있습니다.
 
-- [ ] 모든 Next.js 프로젝트에서 `npm ls next`, lockfile, container image를 확인하고 `16.3.8` 또는 `15.5.27` 이상으로 패치한다.
-- [ ] `next/image`의 `images.remotePatterns` 사용 여부와 allow-list 범위를 점검해 SSRF 영향 가능성을 기록한다.
-- [ ] self-hosted Pages Router + SSG/ISR 조합 서비스가 있다면 cache poisoning 영향 범위와 CDN purge 절차를 확인한다.
-- [ ] React 19.3 업그레이드 후보 앱에서 `<ViewTransition>`을 적용할 목록→상세, 탭, 모달 전환 화면을 1개 선정해 PoC를 만든다.
-- [ ] Fragment Ref로 불필요한 wrapper DOM 또는 취약한 DOM 탐색 로직을 줄일 수 있는 컴포넌트를 찾는다.
-- [ ] 성능 스프린트 때 synthetic benchmark와 실제 사용자 지표(p75/p95 TTI·INP·route transition)를 함께 추적하는 대시보드를 만든다.
-- [ ] AI가 생성한 테스트/코드/분류 결과를 바로 신뢰하지 말고, diff review·재현 가능한 benchmark·canary 배포 가드레일을 필수 조건으로 둔다.
-- [ ] 프론트엔드 회귀 테스트 커버리지가 낮은 핵심 사용자 여정에 대해 자동 브라우저/시각 테스트 도입 가능성을 평가한다.
+실무적으로 이 글의 시사점은 “라이브러리를 쓰지 말자”가 아니라, 플랫폼 기능을 선택지로 더 잘 노출하고 프레임워크 친화적인 문서·예제·교육이 필요하다는 점입니다. 표준 기능이 성능과 접근성 면에서 유리한 경우가 많지만, 개발자가 그것을 쉽게 발견하고 자신이 쓰는 스택에 적용할 수 있어야 실제 채택으로 이어집니다.
 
-## 용어 정리 콜아웃
+## 요약 불가/검증 필요 링크
 
-> **SSRF(Server-Side Request Forgery)**: 서버가 공격자가 지정한 URL로 요청을 보내게 만드는 취약점입니다. 이미지 최적화처럼 서버가 외부 리소스를 가져오는 기능에서 private IP나 내부 메타데이터 엔드포인트 접근으로 이어질 수 있습니다.
+아래 링크들은 수집은 되었지만 품질게이트를 통과하지 못해 본문 요약에서 제외했습니다.
 
-> **SSG/ISR Cache Poisoning**: 정적 생성 또는 증분 재생성 페이지의 캐시에 잘못된 응답이 저장되어 이후 사용자에게 오염된 콘텐츠가 제공되는 문제입니다. self-hosted 환경에서는 캐시 계층과 purge 절차까지 함께 점검해야 합니다.
+- https://javascriptweekly.com/issues/805  
+  - 이유: 접근은 가능하지만 본문 추출 길이가 0으로, 요약에 필요한 본문 텍스트가 없습니다.
+- https://javascriptweekly.com/link/191187/rss  
+  - 이유: 접근은 가능하지만 본문 추출 길이가 0으로, 요약에 필요한 본문 텍스트가 없습니다.
+- https://javascriptweekly.com/link/191126/rss  
+  - 이유: 접근은 가능하지만 본문 추출 길이가 0으로, 요약에 필요한 본문 텍스트가 없습니다.
 
-> **View Transition API / React `<ViewTransition>`**: DOM 상태 변화 전후의 시각적 전환을 브라우저가 애니메이션으로 연결하게 하는 API와 React 래퍼입니다. React 19.3부터 stable로 제공됩니다.
+## 제외한 링크
 
-> **Fragment Ref**: React Fragment에 ref를 붙여 여러 자식 DOM을 wrapper 없이 하나의 논리 그룹처럼 다루는 기능입니다. focus 관리, 레이아웃 측정, 이벤트 처리에서 불필요한 DOM을 줄일 수 있습니다.
-
-> **Agent-written code 가드레일**: AI agent가 작성한 코드를 빠르게 배포하더라도 테스트, 리뷰, 관측, canary, rollback 조건을 자동화해 실패 반경을 제한하는 운영 장치입니다.
+React/Next/Vercel/Overreacted 전용 링크는 요청된 대상 선택 규칙에 따라 이번 JavaScript Weekly 전용 요약에서 제외했습니다.
